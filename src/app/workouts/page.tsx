@@ -103,7 +103,7 @@ export default function WorkoutsPage() {
     setExercises(exercises.filter((_, i) => i !== idx));
   }
 
-  const showForm = editing !== null || (editing === null && name !== "" && exercises.length > 0);
+  const showForm = editing !== null || exercises.length > 0;
 
   return (
     <div className="space-y-6">
