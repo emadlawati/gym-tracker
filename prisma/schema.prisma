@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model WorkoutTemplate {
+  id        String              @id @default(cuid())
+  name      String              @unique
+  exercises TemplateExercise[]
+  sessions  WorkoutSession[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+model TemplateExercise {
+  id           String          @id @default(cuid())
+  templateId   String
+  template     WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exerciseName String
+  sets         Int             @default(3)
+  sortOrder    Int             @default(0)
+  notes        String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model WorkoutSession {
+  id         String          @id @default(cuid())
+  templateId String
+  template   WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  date       DateTime        @default(now())
+  notes      String?
+  completed  Boolean         @default(false)
+  exerciseSets ExerciseSet[]
+  createdAt  DateTime        @default(now())
+}
+
+model ExerciseSet {
+  id           String         @id @default(cuid())
+  sessionId    String
+  session      WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exerciseName String
+  setNumber    Int
+  weight       Float          @default(0)
+  reps         Int            @default(0)
+  rpe          Float?
+  completed    Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+}
