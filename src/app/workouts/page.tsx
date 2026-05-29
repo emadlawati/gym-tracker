@@ -8,6 +8,7 @@ interface Exercise {
   sets: number;
   sortOrder: number;
   notes?: string;
+  settings?: string;
 }
 
 interface Template {
@@ -53,6 +54,7 @@ export default function WorkoutsPage() {
         sets: e.sets,
         sortOrder: e.sortOrder,
         notes: e.notes || "",
+        settings: (e as Exercise & { settings?: string }).settings || "",
       }))
     );
   }
@@ -74,6 +76,7 @@ export default function WorkoutsPage() {
         sets: ex.sets,
         sortOrder: i,
         notes: ex.notes || undefined,
+        settings: ex.settings || undefined,
       })),
     };
 
@@ -104,7 +107,7 @@ export default function WorkoutsPage() {
   }
 
   function addExercise() {
-    setExercises([...exercises, { exerciseName: "", sets: 3, sortOrder: exercises.length }]);
+    setExercises([...exercises, { exerciseName: "", sets: 3, sortOrder: exercises.length, settings: "" }]);
   }
 
   function removeExercise(idx: number) {
@@ -256,6 +259,17 @@ export default function WorkoutsPage() {
                       className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500 placeholder:text-zinc-600"
                     />
                   </div>
+                  <input
+                    type="text"
+                    value={ex.settings || ""}
+                    onChange={(e) => {
+                      const n = [...exercises];
+                      n[idx] = { ...n[idx], settings: e.target.value };
+                      setExercises(n);
+                    }}
+                    placeholder="Settings (e.g. seat pos 5, medium grip)"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder:text-zinc-600"
+                  />
                 </div>
               ))}
             </div>

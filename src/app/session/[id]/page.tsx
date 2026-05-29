@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import SetInput from "@/components/SetInput";
 import RestTimer from "@/components/RestTimer";
+import PlateCalculator from "@/components/PlateCalculator";
+import WarmupCalculator from "@/components/WarmupCalculator";
+import { formatDuration } from "@/lib/utils";
 
 interface TemplateExercise {
   id: string;
@@ -11,6 +14,7 @@ interface TemplateExercise {
   sets: number;
   sortOrder: number;
   notes: string | null;
+  settings?: string | null;
 }
 
 interface ExerciseSet {
@@ -29,6 +33,7 @@ interface Session {
   date: string;
   notes: string | null;
   completed: boolean;
+  duration: number | null;
   template: {
     name: string;
     exercises: TemplateExercise[];
@@ -42,6 +47,10 @@ interface PreviousData {
   sets: { setNumber: number; weight: number; reps: number; rpe: number | null }[];
 }
 
+interface VolumePRMap {
+  [exerciseName: string]: { current: number; previous: number };
+}
+
 export default function SessionPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -49,6 +58,12 @@ export default function SessionPage() {
   const [loading, setLoading] = useState(true);
   const [previousData, setPreviousData] = useState<Map<string, PreviousData>>(new Map());
   const [error, setError] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const tick = setInterval(() => setElapsed((p) => p + 1), 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   async function fetchPrevious(exerciseName: string, sessionId: string) {
     const res = await fetch(
@@ -130,15 +145,62 @@ export default function SessionPage() {
     });
   }
 
+  function copyPreviousSets(exerciseName: string) {
+    const prev = previousData.get(exerciseName);
+    if (!prev || !session) return;
+
+    const exerciseSets = session.exerciseSets
+      .filter((s) => s.exerciseName === exerciseName)
+      .sort((a, b) => a.setNumber - b.setNumber);
+
+    prev.sets.forEach((ps) => {
+      const match = exerciseSets.find((es) => es.setNumber === ps.setNumber);
+      if (match) {
+        handleSaveSet(match.id, { weight: ps.weight, reps: ps.reps, rpe: ps.rpe });
+      }
+    });
+  }
+
+  function getVolumePR(exerciseName: string): VolumePRMap[string] | null {
+    if (!session) return null;
+    const currentSets = session.exerciseSets.filter(
+      (s) => s.exerciseName === exerciseName && s.completed
+    );
+    const currentVolume = currentSets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+    if (currentVolume === 0) return null;
+
+    const prev = previousData.get(exerciseName);
+    if (!prev) return null;
+    const prevVolume = prev.sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+
+    if (currentVolume > prevVolume) {
+      return { current: currentVolume, previous: prevVolume };
+    }
+    return null;
+  }
+
   async function handleComplete() {
     if (!session) return;
     await fetch(`/api/sessions/${session.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed: true }),
+      body: JSON.stringify({ completed: true, duration: elapsed }),
     });
     router.push("/");
     router.refresh();
+  }
+
+  function getFirstWorkingWeight(exerciseName: string): number {
+    if (!session) return 0;
+    const sets = session.exerciseSets.filter(
+      (s) => s.exerciseName === exerciseName && s.completed
+    );
+    if (sets.length === 0) {
+      const prev = previousData.get(exerciseName);
+      if (prev && prev.sets.length > 0) return prev.sets[0].weight;
+      return 0;
+    }
+    return sets[0].weight;
   }
 
   if (loading) {
@@ -173,6 +235,9 @@ export default function SessionPage() {
           <h1 className="text-xl font-bold text-white">{session.template.name}</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
             {exercises.length} exercises · {session.exerciseSets.length} sets
+            {elapsed > 0 && (
+              <span className="ml-3 text-indigo-400 font-mono">{formatDuration(elapsed)}</span>
+            )}
           </p>
         </div>
         <button
@@ -190,20 +255,44 @@ export default function SessionPage() {
 
         const prev = previousData.get(exercise.exerciseName);
         const completedCount = exerciseSets.filter((s) => s.completed).length;
+        const volumePR = getVolumePR(exercise.exerciseName);
+        const workingWeight = getFirstWorkingWeight(exercise.exerciseName);
 
         return (
           <section key={exercise.id} className="space-y-3">
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-baseline gap-2 flex-wrap">
               <h2 className="text-base font-semibold text-white">{exercise.exerciseName}</h2>
               <span className="text-xs text-zinc-600">
                 {completedCount}/{exercise.sets} sets
               </span>
+              {volumePR && (
+                <span className="text-[10px] bg-amber-900/50 text-amber-400 px-1.5 py-0.5 rounded font-bold animate-pulse">
+                  PR! {volumePR.current}kg
+                </span>
+              )}
+              {prev && (
+                <button
+                  onClick={() => copyPreviousSets(exercise.exerciseName)}
+                  className="text-[10px] text-indigo-400 hover:text-indigo-300 ml-auto"
+                >
+                  Copy last
+                </button>
+              )}
               {exercise.notes && (
-                <span className="text-xs text-zinc-600 italic ml-auto max-w-[200px] truncate">
+                <span className="text-xs text-zinc-600 italic w-full truncate">
                   {exercise.notes}
                 </span>
               )}
+              {exercise.settings && (
+                <span className="text-[10px] text-zinc-500 w-full truncate">
+                  Settings: {exercise.settings}
+                </span>
+              )}
             </div>
+
+            {workingWeight > 0 && (
+              <WarmupCalculator workingWeight={workingWeight} />
+            )}
 
             {prev && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2">
@@ -256,6 +345,7 @@ export default function SessionPage() {
         )}
       </div>
 
+      <PlateCalculator />
       <RestTimer />
     </div>
   );

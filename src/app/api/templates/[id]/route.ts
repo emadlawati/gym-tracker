@@ -28,11 +28,12 @@ export async function PUT(
     data: {
       name,
       exercises: {
-        create: exercises.map((ex: { exerciseName: string; sets: number; sortOrder: number; notes?: string }) => ({
+        create: exercises.map((ex: { exerciseName: string; sets: number; sortOrder: number; notes?: string; settings?: string }) => ({
           exerciseName: ex.exerciseName,
           sets: ex.sets,
           sortOrder: ex.sortOrder,
           notes: ex.notes || null,
+          settings: ex.settings || null,
         })),
       },
     },

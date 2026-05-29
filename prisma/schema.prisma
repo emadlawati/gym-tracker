@@ -24,19 +24,21 @@ model TemplateExercise {
   sets         Int             @default(3)
   sortOrder    Int             @default(0)
   notes        String?
+  settings     String?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 }
 
 model WorkoutSession {
-  id         String          @id @default(cuid())
-  templateId String
-  template   WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  date       DateTime        @default(now())
-  notes      String?
-  completed  Boolean         @default(false)
+  id           String          @id @default(cuid())
+  templateId   String
+  template     WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  date         DateTime        @default(now())
+  notes        String?
+  completed    Boolean         @default(false)
+  duration     Int?
   exerciseSets ExerciseSet[]
-  createdAt  DateTime        @default(now())
+  createdAt    DateTime        @default(now())
 }
 
 model ExerciseSet {
@@ -50,4 +52,19 @@ model ExerciseSet {
   rpe          Float?
   completed    Boolean        @default(false)
   createdAt    DateTime       @default(now())
+}
+
+model BodyWeight {
+  id        String   @id @default(cuid())
+  weight    Float
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+model ExerciseSettingsEntry {
+  id           String   @id @default(cuid())
+  exerciseName String   @unique
+  settings     String   @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

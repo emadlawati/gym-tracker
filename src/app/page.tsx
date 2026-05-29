@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { formatRelativeDate } from "@/lib/utils";
+import { formatRelativeDate, calculateStreak } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const templates = await prisma.workoutTemplate.findMany({
@@ -19,7 +19,34 @@ export default async function DashboardPage() {
     orderBy: { date: "desc" },
   });
 
+  const allCompletedSessions = await prisma.workoutSession.findMany({
+    where: { completed: true },
+    select: { date: true },
+    orderBy: { date: "desc" },
+  });
+
+  const streak = calculateStreak(allCompletedSessions.map((s) => s.date));
+
+  const latestWeight = await prisma.bodyWeight.findFirst({
+    orderBy: { date: "desc" },
+  });
+
   const lastSession = recentSessions[0];
+
+  const totalWorkouts = await prisma.workoutSession.count({
+    where: { completed: true },
+  });
+
+  const thisWeekStart = new Date();
+  thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
+  thisWeekStart.setHours(0, 0, 0, 0);
+
+  const workoutsThisWeek = await prisma.workoutSession.count({
+    where: {
+      completed: true,
+      date: { gte: thisWeekStart },
+    },
+  });
 
   return (
     <div className="space-y-8">
@@ -31,6 +58,36 @@ export default async function DashboardPage() {
             : "Start your first workout"}
         </p>
       </header>
+
+      <section className="grid grid-cols-3 gap-2">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center">
+          <p className="text-2xl font-bold text-white">{totalWorkouts}</p>
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">Workouts</p>
+        </div>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center">
+          <p className={`text-2xl font-bold ${streak > 0 ? "text-amber-400" : "text-white"}`}>{streak}</p>
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">Day Streak</p>
+        </div>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center">
+          <p className="text-2xl font-bold text-white">{workoutsThisWeek}</p>
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">This Week</p>
+        </div>
+      </section>
+
+      {latestWeight && (
+        <Link
+          href="/weight"
+          className="block bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl p-4 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Body Weight</p>
+              <p className="text-lg font-bold text-white mt-0.5">{latestWeight.weight}kg</p>
+            </div>
+            <span className="text-xs text-zinc-500">{formatRelativeDate(latestWeight.date)}</span>
+          </div>
+        </Link>
+      )}
 
       <section>
         <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Quick Start</h2>

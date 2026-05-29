@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { estimate1RM } from "@/lib/utils";
 
 interface Props {
   setNumber: number;
@@ -17,19 +18,25 @@ export default function SetInput({ setNumber, initialWeight, initialReps, initia
   const [rpe, setRpe] = useState(initialRpe ?? null as number | null);
   const [saved, setSaved] = useState(!!initialWeight && !!initialReps);
 
+  const e1rm = useMemo(() => estimate1RM(weight, reps), [weight, reps]);
+
   const handleSave = () => {
     onSave({ weight, reps, rpe });
     setSaved(true);
   };
 
-  const handleEdit = () => {
-    setSaved(false);
+  const adjustWeight = (delta: number) => {
+    setWeight((prev) => {
+      const next = prev + delta;
+      return next > 0 ? Math.round(next * 10) / 10 : 0;
+    });
+    if (saved) setSaved(false);
   };
 
   if (saved) {
     return (
       <div
-        onClick={handleEdit}
+        onClick={() => setSaved(false)}
         className="flex items-center justify-between bg-zinc-800/60 rounded-lg px-4 py-3 cursor-pointer hover:bg-zinc-800 border border-zinc-800/80 transition-colors group"
       >
         <span className="text-xs font-semibold text-zinc-500 w-8">#{setNumber}</span>
@@ -38,8 +45,11 @@ export default function SetInput({ setNumber, initialWeight, initialReps, initia
           <span className="text-xs text-zinc-500">x</span>
           <span className="text-base font-semibold text-white">{reps}</span>
           {rpe && <span className="text-xs text-zinc-500">@ RPE {rpe}</span>}
+          {e1rm > 0 && (
+            <span className="text-xs text-indigo-400/70 ml-auto">{e1rm} e1RM</span>
+          )}
         </div>
-        <span className="text-xs text-zinc-600 group-hover:text-zinc-400 transition-colors">tap to edit</span>
+        <span className="text-xs text-zinc-600 group-hover:text-zinc-400 transition-colors ml-2">edit</span>
       </div>
     );
   }
@@ -54,19 +64,35 @@ export default function SetInput({ setNumber, initialWeight, initialReps, initia
           </span>
         )}
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-end">
         <div className="flex-1">
           <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Weight (kg)</label>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.5"
-            min="0"
-            value={weight || ""}
-            onChange={(e) => setWeight(parseFloat(e.target.value) || 0)}
-            className="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-            placeholder="0"
-          />
+          <div className="flex items-center gap-1 mt-1">
+            <button
+              type="button"
+              onClick={() => adjustWeight(-2.5)}
+              className="w-7 h-8 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded-md text-xs font-bold shrink-0 transition-colors"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.5"
+              min="0"
+              value={weight || ""}
+              onChange={(e) => setWeight(parseFloat(e.target.value) || 0)}
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white text-center focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              placeholder="0"
+            />
+            <button
+              type="button"
+              onClick={() => adjustWeight(2.5)}
+              className="w-7 h-8 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded-md text-xs font-bold shrink-0 transition-colors"
+            >
+              +
+            </button>
+          </div>
         </div>
         <div className="flex-1">
           <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Reps</label>
@@ -80,12 +106,12 @@ export default function SetInput({ setNumber, initialWeight, initialReps, initia
             placeholder="0"
           />
         </div>
-        <div style={{ width: 100 }}>
+        <div style={{ width: 90 }}>
           <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">RPE</label>
           <select
             value={rpe ?? ""}
             onChange={(e) => setRpe(e.target.value ? parseFloat(e.target.value) : null)}
-            className="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            className="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
           >
             <option value="">—</option>
             {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((v) => (
@@ -94,6 +120,13 @@ export default function SetInput({ setNumber, initialWeight, initialReps, initia
           </select>
         </div>
       </div>
+      {weight > 0 && reps > 0 && (
+        <div className="text-center">
+          <span className="text-xs text-indigo-400 font-medium">
+            e1RM: {e1rm}kg
+          </span>
+        </div>
+      )}
       <button
         onClick={handleSave}
         disabled={weight <= 0 || reps <= 0}

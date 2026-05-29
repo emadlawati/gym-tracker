@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { formatDate, estimate1RM } from "@/lib/utils";
+import { formatDate, estimate1RM, formatDuration } from "@/lib/utils";
 
 export default async function SessionDetailPage({
   params,
@@ -54,6 +54,7 @@ export default async function SessionDetailPage({
         <p className="text-sm text-zinc-500 mt-0.5">
           {formatDate(session.date)}
           {session.completed ? " · Completed" : " · In Progress"}
+          {session.duration ? ` · ${formatDuration(session.duration)}` : ""}
         </p>
         {session.notes && (
           <p className="text-sm text-zinc-400 mt-2 bg-zinc-900 rounded-lg px-3 py-2 border border-zinc-800">
