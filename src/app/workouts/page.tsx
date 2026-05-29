@@ -23,6 +23,7 @@ export default function WorkoutsPage() {
   const [editing, setEditing] = useState<Template | null>(null);
   const [name, setName] = useState("");
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     fetchTemplates();
@@ -36,12 +37,14 @@ export default function WorkoutsPage() {
   }
 
   function startNew() {
+    setIsCreating(true);
     setEditing(null);
     setName("");
-    setExercises([{ exerciseName: "", sets: 3, sortOrder: 0 }]);
+    setExercises([]);
   }
 
   function startEdit(t: Template) {
+    setIsCreating(false);
     setEditing(t);
     setName(t.name);
     setExercises(
@@ -52,6 +55,13 @@ export default function WorkoutsPage() {
         notes: e.notes || "",
       }))
     );
+  }
+
+  function cancelForm() {
+    setIsCreating(false);
+    setEditing(null);
+    setName("");
+    setExercises([]);
   }
 
   async function handleSave() {
@@ -81,9 +91,7 @@ export default function WorkoutsPage() {
       });
     }
 
-    setEditing(null);
-    setName("");
-    setExercises([]);
+    cancelForm();
     fetchTemplates();
     router.refresh();
   }
@@ -103,7 +111,7 @@ export default function WorkoutsPage() {
     setExercises(exercises.filter((_, i) => i !== idx));
   }
 
-  const showForm = editing !== null || exercises.length > 0;
+  const showForm = editing !== null || isCreating;
 
   return (
     <div className="space-y-6">
@@ -256,22 +264,23 @@ export default function WorkoutsPage() {
           <div className="flex gap-2 pt-2">
             <button
               onClick={handleSave}
-              disabled={!name.trim() || exercises.some((e) => !e.exerciseName.trim())}
-              className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              disabled={!name.trim() || exercises.length === 0 || exercises.some((e) => !e.exerciseName.trim())}
+              className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {editing ? "Update Workout" : "Create Workout"}
             </button>
             <button
-              onClick={() => {
-                setEditing(null);
-                setName("");
-                setExercises([]);
-              }}
+              onClick={cancelForm}
               className="px-4 py-2.5 bg-zinc-800 text-zinc-300 rounded-lg text-sm font-medium hover:bg-zinc-700 transition-colors"
             >
               Cancel
             </button>
           </div>
+          {(!name.trim() || exercises.length === 0) && (
+            <p className="text-xs text-zinc-500 mt-1">
+              {!name.trim() ? "Enter a workout name" : "Add at least one exercise"}
+            </p>
+          )}
         </div>
       )}
     </div>
