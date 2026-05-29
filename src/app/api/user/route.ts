@@ -1,18 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getLevel, calculateSessionXP, checkAchievements, getAchievementDefs, getLevelName } from "@/lib/game";
+import {
+  getLevel,
+  getLevelName,
+  calculateSessionXP,
+  checkAllAchievements,
+  getAllAchievementDefs,
+  getIdentityTitle,
+} from "@/lib/game";
 
 export async function GET() {
   let profile = await prisma.userProfile.findUnique({ where: { id: "default" } });
-
   if (!profile) {
-    profile = await prisma.userProfile.create({
-      data: { id: "default" },
-    });
+    profile = await prisma.userProfile.create({ data: { id: "default" } });
   }
 
   const level = getLevel(profile.currentXP);
+
+  const bodyweightEntry = await prisma.bodyWeight.findFirst({ orderBy: { date: "desc" } });
+  const bodyweight = bodyweightEntry?.weight || null;
+
+  const exerciseBests = await getExerciseBests();
+
+  const uniqueExercises = await prisma.exerciseSet.findMany({
+    where: { completed: true },
+    select: { exerciseName: true },
+    distinct: ["exerciseName"],
+  });
+
+  const totalSets = await prisma.exerciseSet.count({ where: { completed: true } });
+
+  const rpe10Sets = await prisma.exerciseSet.count({
+    where: { completed: true, rpe: { gte: 10 } },
+  });
+
   const achievements = await prisma.achievement.findMany();
+  const achievementCount = achievements.filter((a) => a.unlockedAt).length;
+
+  const evalProfile = {
+    bodyweight,
+    exerciseBests,
+    totalSessions: profile.totalSessions,
+    totalPRs: profile.totalPRs,
+    lifetimeVolume: profile.lifetimeVolume,
+    currentStreak: profile.currentStreak,
+    bestStreak: profile.bestStreak,
+    totalXP: profile.currentXP,
+    level: level.level,
+    uniqueExercises: uniqueExercises.length,
+    totalSets,
+    rpe10Sets,
+    completedAllTemplatesIn4Days: false,
+    completedAllTemplatesIn7Days: false,
+    sessionsWith5plusPRs: 0,
+  };
+
+  const results = checkAllAchievements(evalProfile);
+  const identity = getIdentityTitle({ totalSessions: profile.totalSessions, bestStreak: profile.bestStreak, level: level.level, achievementCount });
 
   return NextResponse.json({
     ...profile,
@@ -20,7 +64,10 @@ export async function GET() {
     levelName: getLevelName(level.level),
     currentLevelXP: level.currentLevelXP,
     nextLevelXP: level.nextLevelXP,
+    bodyweight,
+    identity,
     achievements,
+    allAchievements: results,
   });
 }
 
@@ -37,7 +84,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (session.xpEarned) {
-    return NextResponse.json({ error: "XP already awarded for this session" }, { status: 400 });
+    return NextResponse.json({ error: "XP already awarded" }, { status: 400 });
   }
 
   const profile = await prisma.userProfile.findUnique({ where: { id: "default" } });
@@ -45,39 +92,19 @@ export async function POST(req: NextRequest) {
     await prisma.userProfile.create({ data: { id: "default" } });
   }
 
-  const exerciseNames = [...new Set(session.exerciseSets.map((s) => s.exerciseName))];
-  const previousPRs: { exerciseName: string; bestE1RM: number; bestVolume: number }[] = [];
+  const nonSessionBests = await getExerciseBestsExcluding(sessionId);
 
-  for (const name of exerciseNames) {
-    const prevSets = await prisma.exerciseSet.findMany({
-      where: {
-        exerciseName: name,
-        completed: true,
-        sessionId: { not: sessionId },
-      },
-    });
-
-    let bestE1RM = 0;
-    let bestVolume = 0;
-    for (const s of prevSets) {
-      const e1rm = s.weight * (1 + s.reps / 30);
-      if (e1rm > bestE1RM) bestE1RM = e1rm;
-      const vol = s.weight * s.reps;
-      if (vol > bestVolume) bestVolume = vol;
-    }
-
-    previousPRs.push({ exerciseName: name, bestE1RM, bestVolume });
-  }
-
-  const { xp, newPRs, volume } = calculateSessionXP(
+  const { xp, newRepPRs, newWeightPRs, volume } = calculateSessionXP(
     session.exerciseSets.map((s) => ({
       exerciseName: s.exerciseName,
       weight: s.weight,
       reps: s.reps,
       completed: s.completed,
     })),
-    previousPRs
+    nonSessionBests
   );
+
+  const totalPRs = newWeightPRs + newRepPRs;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -102,7 +129,7 @@ export async function POST(req: NextRequest) {
       currentXP: xp,
       lifetimeVolume: volume,
       totalSessions: 1,
-      totalPRs: newPRs,
+      totalPRs,
       currentStreak: newStreak,
       bestStreak,
       lastWorkoutDate: today,
@@ -111,7 +138,7 @@ export async function POST(req: NextRequest) {
       currentXP: { increment: xp },
       lifetimeVolume: { increment: volume },
       totalSessions: { increment: 1 },
-      totalPRs: { increment: newPRs },
+      totalPRs: { increment: totalPRs },
       currentStreak: newStreak,
       bestStreak,
       lastWorkoutDate: today,
@@ -123,27 +150,53 @@ export async function POST(req: NextRequest) {
     data: { xpEarned: xp },
   });
 
+  const bodyweightEntry = await prisma.bodyWeight.findFirst({ orderBy: { date: "desc" } });
+  const bodyweight = bodyweightEntry?.weight || null;
+  const exerciseBests = await getExerciseBests();
+  const uniqueExercises = await prisma.exerciseSet.findMany({
+    where: { completed: true },
+    select: { exerciseName: true },
+    distinct: ["exerciseName"],
+  });
+  const totalSets = await prisma.exerciseSet.count({ where: { completed: true } });
+  const rpe10Sets = await prisma.exerciseSet.count({
+    where: { completed: true, rpe: { gte: 10 } },
+  });
+
   const level = getLevel(updatedProfile.currentXP);
-  const newAchievements = checkAchievements({
+  const evalProfile = {
+    bodyweight,
+    exerciseBests,
     totalSessions: updatedProfile.totalSessions,
     totalPRs: updatedProfile.totalPRs,
     lifetimeVolume: updatedProfile.lifetimeVolume,
     currentStreak: updatedProfile.currentStreak,
     bestStreak: updatedProfile.bestStreak,
-    currentXP: updatedProfile.currentXP,
     totalXP: updatedProfile.currentXP,
     level: level.level,
-  });
+    uniqueExercises: uniqueExercises.length,
+    totalSets,
+    rpe10Sets,
+    completedAllTemplatesIn4Days: false,
+    completedAllTemplatesIn7Days: false,
+    sessionsWith5plusPRs: totalPRs >= 5 ? 1 : 0,
+  };
 
-  const unlockedAchievements: string[] = [];
-  for (const def of newAchievements) {
-    const existing = await prisma.achievement.findUnique({ where: { key: def.key } });
-    if (existing && existing.unlockedAt) continue;
+  const results = checkAllAchievements(evalProfile);
+  const unlockedAchievements: { icon: string; title: string }[] = [];
+
+  for (const r of results) {
+    if (!r.unlocked) continue;
+    const existing = await prisma.achievement.findUnique({ where: { key: r.key } });
+    if (existing?.unlockedAt) continue;
+
+    const def = getAllAchievementDefs().find((d) => d.key === r.key);
+    if (!def) continue;
 
     await prisma.achievement.upsert({
-      where: { key: def.key },
+      where: { key: r.key },
       create: {
-        key: def.key,
+        key: r.key,
         tier: def.tier,
         unlockedAt: new Date(),
         progress: 100,
@@ -155,22 +208,64 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    unlockedAchievements.push(def.key);
+    unlockedAchievements.push({ icon: def.icon, title: def.title });
   }
 
   return NextResponse.json({
     xp,
     volume,
-    newPRs,
+    newRepPRs,
+    newWeightPRs,
     newStreak,
     level: level.level,
     levelName: getLevelName(level.level),
-    currentLevelXP: level.currentLevelXP,
-    nextLevelXP: level.nextLevelXP,
     totalXP: updatedProfile.currentXP,
-    newAchievements: unlockedAchievements.map((key) => {
-      const def = getAchievementDefs().find((d) => d.key === key)!;
-      return def;
-    }),
+    newAchievements: unlockedAchievements,
+  });
+}
+
+async function getExerciseBests(): Promise<{ exerciseName: string; bestE1RM: number; bestWeight: number; bestReps: number; bestVolume: number }[]> {
+  const sets = await prisma.exerciseSet.findMany({
+    where: { completed: true, weight: { gt: 0 } },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const map = new Map<string, typeof sets>();
+  for (const s of sets) {
+    if (!map.has(s.exerciseName)) map.set(s.exerciseName, []);
+    map.get(s.exerciseName)!.push(s);
+  }
+
+  return Array.from(map.entries()).map(([name, exSets]) => {
+    let bestE1RM = 0, bestWeight = 0, bestReps = 0, bestVolume = 0;
+    for (const s of exSets) {
+      const e1rm = s.weight * (1 + s.reps / 30);
+      if (e1rm > bestE1RM) { bestE1RM = e1rm; bestWeight = s.weight; bestReps = s.reps; }
+      const vol = s.weight * s.reps;
+      if (vol > bestVolume) bestVolume = vol;
+    }
+    return { exerciseName: name, bestE1RM, bestWeight, bestReps, bestVolume };
+  });
+}
+
+async function getExerciseBestsExcluding(sessionId: string) {
+  const sets = await prisma.exerciseSet.findMany({
+    where: { completed: true, weight: { gt: 0 }, sessionId: { not: sessionId } },
+    orderBy: { createdAt: "asc" },
+  });
+  const map = new Map<string, typeof sets>();
+  for (const s of sets) {
+    if (!map.has(s.exerciseName)) map.set(s.exerciseName, []);
+    map.get(s.exerciseName)!.push(s);
+  }
+  return Array.from(map.entries()).map(([name, exSets]) => {
+    let bestE1RM = 0, bestWeight = 0, bestReps = 0, bestVolume = 0;
+    for (const s of exSets) {
+      const e1rm = s.weight * (1 + s.reps / 30);
+      if (e1rm > bestE1RM) { bestE1RM = e1rm; bestWeight = s.weight; bestReps = s.reps; }
+      const vol = s.weight * s.reps;
+      if (vol > bestVolume) bestVolume = vol;
+    }
+    return { exerciseName: name, bestE1RM, bestWeight, bestReps, bestVolume };
   });
 }

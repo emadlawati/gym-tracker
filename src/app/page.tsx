@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatRelativeDate, calculateStreak } from "@/lib/utils";
-import { getLevel, VOLUME_MILESTONES } from "@/lib/game";
+import { getLevel, VOLUME_MILESTONES, getIdentityTitle } from "@/lib/game";
 import Heatmap from "@/components/Heatmap";
 import LevelBadge from "@/components/LevelBadge";
 import WeeklyReport from "@/components/WeeklyReport";
@@ -69,6 +69,14 @@ export default async function DashboardPage() {
   const profile = await prisma.userProfile.findUnique({ where: { id: "default" } });
   const level = getLevel(profile?.currentXP || 0);
 
+  const allAchs = await prisma.achievement.findMany({ where: { unlockedAt: { not: null } } });
+  const identity = getIdentityTitle({
+    totalSessions: profile?.totalSessions || 0,
+    bestStreak: profile?.bestStreak || 0,
+    level: level.level,
+    achievementCount: allAchs.length,
+  });
+
   const heatmapSessions = await prisma.workoutSession.findMany({
     where: { completed: true },
     select: { date: true, exerciseSets: { where: { completed: true } } },
@@ -98,6 +106,11 @@ export default async function DashboardPage() {
           {lastSession
             ? `Last workout: ${formatRelativeDate(lastSession.date)}`
             : "Start your first workout"}
+          {(profile?.totalSessions || 0) > 0 && (
+            <span className="ml-3 bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded text-[10px] font-medium">
+              {identity}
+            </span>
+          )}
         </p>
       </header>
 

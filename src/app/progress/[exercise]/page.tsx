@@ -72,6 +72,14 @@ export default async function ProgressPage({
   const sessionsCount = history.length;
   const lastSet = sets[sets.length - 1];
 
+  let bestE1RM = 0;
+  for (const s of sets) {
+    const e = s.weight * (1 + s.reps / 30);
+    if (e > bestE1RM) bestE1RM = e;
+  }
+  const bwEntry = await prisma.bodyWeight.findFirst({ orderBy: { date: "desc" } });
+  const bestRatio = bwEntry ? Math.round((bestE1RM / bwEntry.weight) * 100) : 0;
+
   return (
     <div className="space-y-6 pt-4">
       <div>
@@ -110,6 +118,24 @@ export default async function ProgressPage({
                 <p className="text-lg font-bold text-white">
                   {lastSet.rpe ?? "—"}
                 </p>
+              </div>
+            </div>
+          )}
+
+          {bestE1RM > 0 && bwEntry && (
+            <div className="bg-zinc-900 border border-indigo-500/20 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Best e1RM</p>
+                  <p className="text-lg font-bold text-white">{Math.round(bestE1RM)}kg</p>
+                  {bwEntry && <p className="text-[10px] text-zinc-500">{bestRatio}% bodyweight</p>}
+                </div>
+                <Link
+                  href="/achievements?filter=strength"
+                  className="text-xs text-indigo-400 hover:text-indigo-300"
+                >
+                  View milestones →
+                </Link>
               </div>
             </div>
           )}

@@ -11,7 +11,8 @@ interface Props {
   initialFeeling?: string | null;
   onSave: (data: { weight: number; reps: number; rpe: number | null; feeling: string | null }) => void;
   previous?: { weight: number; reps: number; rpe: number | null } | null;
-  previousBestE1RM?: number;
+  previousBestWeight?: number;
+  previousBestReps?: number;
 }
 
 const FEELINGS = [
@@ -30,7 +31,8 @@ export default function SetInput({
   initialFeeling,
   onSave,
   previous,
-  previousBestE1RM,
+  previousBestWeight,
+  previousBestReps,
 }: Props) {
   const [weight, setWeight] = useState(initialWeight ?? 0);
   const [reps, setReps] = useState(initialReps ?? 0);
@@ -39,7 +41,16 @@ export default function SetInput({
   const [saved, setSaved] = useState(!!initialWeight && !!initialReps);
 
   const e1rm = useMemo(() => estimate1RM(weight, reps), [weight, reps]);
-  const isPR = previousBestE1RM != null && e1rm > previousBestE1RM;
+  const isWeightPR = previousBestWeight != null && previousBestReps != null && e1rm > previousBestWeight * (1 + previousBestReps / 30);
+  const isRepPR =
+    previousBestWeight != null &&
+    previousBestReps != null &&
+    weight >= previousBestWeight &&
+    reps > previousBestReps &&
+    !isWeightPR;
+
+  const showPR = isWeightPR || isRepPR;
+  const prLabel = isWeightPR ? "NEW WEIGHT PR!" : isRepPR ? "NEW REP PR!" : "";
 
   const handleSave = () => {
     onSave({ weight, reps, rpe, feeling });
@@ -67,7 +78,9 @@ export default function SetInput({
           <span className="text-base font-semibold text-white">{reps}</span>
           {rpe && <span className="text-xs text-zinc-500">@ RPE {rpe}</span>}
           {e1rm > 0 && (
-            <span className="text-xs text-indigo-400/70 ml-auto">{e1rm} e1RM</span>
+            <span className={`text-xs font-medium ml-auto ${showPR ? "text-amber-400 font-bold" : "text-indigo-400/70"}`}>
+              {e1rm} e1RM
+            </span>
           )}
         </div>
         {feeling && <span className="text-lg ml-2">{feeling}</span>}
@@ -145,8 +158,8 @@ export default function SetInput({
 
       {weight > 0 && reps > 0 && (
         <div className="text-center">
-          <span className={`text-xs font-medium ${isPR ? "text-amber-400 font-bold" : "text-indigo-400"}`}>
-            e1RM: {e1rm}kg {isPR && "🏆 NEW PR!"}
+          <span className={`text-xs font-medium ${showPR ? "text-amber-400 font-bold" : "text-indigo-400"}`}>
+            e1RM: {e1rm}kg {showPR && `🏆 ${prLabel}`}
           </span>
         </div>
       )}

@@ -198,15 +198,18 @@ export default function SessionPage() {
     return null;
   }
 
-  function getPreviousBestE1RM(exerciseName: string): number | undefined {
+  function getPreviousBest(exerciseName: string): { bestWeight: number; bestReps: number } {
     const prev = previousData.get(exerciseName);
-    if (!prev) return undefined;
-    let best = 0;
+    if (!prev || prev.sets.length === 0) return { bestWeight: 0, bestReps: 0 };
+    let bestWeight = 0;
+    let bestReps = 0;
     for (const s of prev.sets) {
-      const e1rm = s.weight * (1 + s.reps / 30);
-      if (e1rm > best) best = e1rm;
+      if (s.weight >= bestWeight && s.reps >= bestReps) {
+        bestWeight = s.weight;
+        bestReps = s.reps;
+      }
     }
-    return best > 0 ? best : undefined;
+    return { bestWeight, bestReps };
   }
 
   async function handleComplete() {
@@ -327,7 +330,7 @@ export default function SessionPage() {
         const completedCount = exerciseSets.filter((s) => s.completed).length;
         const volumePR = getVolumePR(exercise.exerciseName);
         const workingWeight = getFirstWorkingWeight(exercise.exerciseName);
-        const prevBestE1RM = getPreviousBestE1RM(exercise.exerciseName);
+        const prevBestE1RM = getPreviousBest(exercise.exerciseName);
 
         return (
           <section key={exercise.id} className="space-y-3">
@@ -388,7 +391,7 @@ export default function SessionPage() {
               {exerciseSets.map((es) => {
                 const prevSet = prev?.sets.find((ps) => ps.setNumber === es.setNumber);
                 return (
-                  <SetInput
+                    <SetInput
                     key={es.id}
                     setNumber={es.setNumber}
                     initialWeight={es.weight || undefined}
@@ -397,7 +400,8 @@ export default function SessionPage() {
                     initialFeeling={es.feeling}
                     onSave={(data) => handleSaveSet(es.id, data)}
                     previous={prevSet || null}
-                    previousBestE1RM={prevBestE1RM}
+                    previousBestWeight={prevBestE1RM.bestWeight || undefined}
+                    previousBestReps={prevBestE1RM.bestReps || undefined}
                   />
                 );
               })}
