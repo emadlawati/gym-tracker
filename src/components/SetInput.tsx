@@ -8,20 +8,41 @@ interface Props {
   initialWeight?: number;
   initialReps?: number;
   initialRpe?: number | null;
-  onSave: (data: { weight: number; reps: number; rpe: number | null }) => void;
+  initialFeeling?: string | null;
+  onSave: (data: { weight: number; reps: number; rpe: number | null; feeling: string | null }) => void;
   previous?: { weight: number; reps: number; rpe: number | null } | null;
+  previousBestE1RM?: number;
 }
 
-export default function SetInput({ setNumber, initialWeight, initialReps, initialRpe, onSave, previous }: Props) {
+const FEELINGS = [
+  { emoji: "💀", label: "death" },
+  { emoji: "🔥", label: "fire" },
+  { emoji: "⚡", label: "power" },
+  { emoji: "👍", label: "solid" },
+  { emoji: "😤", label: "grind" },
+];
+
+export default function SetInput({
+  setNumber,
+  initialWeight,
+  initialReps,
+  initialRpe,
+  initialFeeling,
+  onSave,
+  previous,
+  previousBestE1RM,
+}: Props) {
   const [weight, setWeight] = useState(initialWeight ?? 0);
   const [reps, setReps] = useState(initialReps ?? 0);
   const [rpe, setRpe] = useState(initialRpe ?? null as number | null);
+  const [feeling, setFeeling] = useState<string | null>(initialFeeling ?? null);
   const [saved, setSaved] = useState(!!initialWeight && !!initialReps);
 
   const e1rm = useMemo(() => estimate1RM(weight, reps), [weight, reps]);
+  const isPR = previousBestE1RM != null && e1rm > previousBestE1RM;
 
   const handleSave = () => {
-    onSave({ weight, reps, rpe });
+    onSave({ weight, reps, rpe, feeling });
     setSaved(true);
   };
 
@@ -49,6 +70,7 @@ export default function SetInput({ setNumber, initialWeight, initialReps, initia
             <span className="text-xs text-indigo-400/70 ml-auto">{e1rm} e1RM</span>
           )}
         </div>
+        {feeling && <span className="text-lg ml-2">{feeling}</span>}
         <span className="text-xs text-zinc-600 group-hover:text-zinc-400 transition-colors ml-2">edit</span>
       </div>
     );
@@ -120,13 +142,34 @@ export default function SetInput({ setNumber, initialWeight, initialReps, initia
           </select>
         </div>
       </div>
+
       {weight > 0 && reps > 0 && (
         <div className="text-center">
-          <span className="text-xs text-indigo-400 font-medium">
-            e1RM: {e1rm}kg
+          <span className={`text-xs font-medium ${isPR ? "text-amber-400 font-bold" : "text-indigo-400"}`}>
+            e1RM: {e1rm}kg {isPR && "🏆 NEW PR!"}
           </span>
         </div>
       )}
+
+      <div className="flex items-center gap-1">
+        <span className="text-[10px] text-zinc-600 mr-1">How was it?</span>
+        {FEELINGS.map((f) => (
+          <button
+            key={f.emoji}
+            type="button"
+            onClick={() => setFeeling(f.emoji)}
+            className={`text-lg p-1 rounded-md transition-all ${
+              feeling === f.emoji
+                ? "bg-zinc-700 scale-125"
+                : "opacity-50 hover:opacity-100 hover:scale-110"
+            }`}
+            title={f.label}
+          >
+            {f.emoji}
+          </button>
+        ))}
+      </div>
+
       <button
         onClick={handleSave}
         disabled={weight <= 0 || reps <= 0}

@@ -6,6 +6,8 @@ import SetInput from "@/components/SetInput";
 import RestTimer from "@/components/RestTimer";
 import PlateCalculator from "@/components/PlateCalculator";
 import WarmupCalculator from "@/components/WarmupCalculator";
+import ProgressRing from "@/components/ProgressRing";
+import Confetti from "@/components/Confetti";
 import { formatDuration } from "@/lib/utils";
 
 interface TemplateExercise {
@@ -24,6 +26,7 @@ interface ExerciseSet {
   weight: number;
   reps: number;
   rpe: number | null;
+  feeling: string | null;
   completed: boolean;
 }
 
@@ -34,6 +37,7 @@ interface Session {
   notes: string | null;
   completed: boolean;
   duration: number | null;
+  xpEarned: number | null;
   template: {
     name: string;
     exercises: TemplateExercise[];
@@ -59,6 +63,13 @@ export default function SessionPage() {
   const [previousData, setPreviousData] = useState<Map<string, PreviousData>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [xpGain, setXpGain] = useState<{
+    xp: number;
+    level: number;
+    levelName: string;
+    newAchievements: { icon: string; title: string }[];
+  } | null>(null);
 
   useEffect(() => {
     const tick = setInterval(() => setElapsed((p) => p + 1), 1000);
@@ -127,7 +138,10 @@ export default function SessionPage() {
     return () => {};
   }, [params.id]);
 
-  async function handleSaveSet(setId: string, data: { weight: number; reps: number; rpe: number | null }) {
+  async function handleSaveSet(
+    setId: string,
+    data: { weight: number; reps: number; rpe: number | null; feeling: string | null }
+  ) {
     await fetch(`/api/sets/${setId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -156,7 +170,12 @@ export default function SessionPage() {
     prev.sets.forEach((ps) => {
       const match = exerciseSets.find((es) => es.setNumber === ps.setNumber);
       if (match) {
-        handleSaveSet(match.id, { weight: ps.weight, reps: ps.reps, rpe: ps.rpe });
+        handleSaveSet(match.id, {
+          weight: ps.weight,
+          reps: ps.reps,
+          rpe: ps.rpe,
+          feeling: null,
+        });
       }
     });
   }
@@ -173,21 +192,57 @@ export default function SessionPage() {
     if (!prev) return null;
     const prevVolume = prev.sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
 
-    if (currentVolume > prevVolume) {
+    if (currentVolume > prevVolume && prevVolume > 0) {
       return { current: currentVolume, previous: prevVolume };
     }
     return null;
   }
 
+  function getPreviousBestE1RM(exerciseName: string): number | undefined {
+    const prev = previousData.get(exerciseName);
+    if (!prev) return undefined;
+    let best = 0;
+    for (const s of prev.sets) {
+      const e1rm = s.weight * (1 + s.reps / 30);
+      if (e1rm > best) best = e1rm;
+    }
+    return best > 0 ? best : undefined;
+  }
+
   async function handleComplete() {
     if (!session) return;
+
     await fetch(`/api/sessions/${session.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completed: true, duration: elapsed }),
     });
-    router.push("/");
-    router.refresh();
+
+    const xpRes = await fetch("/api/user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: session.id }),
+    });
+
+    const xpData = await xpRes.json();
+
+    if (xpData.xp) {
+      setXpGain({
+        xp: xpData.xp,
+        level: xpData.level,
+        levelName: xpData.levelName,
+        newAchievements: xpData.newAchievements || [],
+      });
+      setShowConfetti(true);
+
+      setTimeout(() => {
+        router.push("/");
+        router.refresh();
+      }, 4000);
+    } else {
+      router.push("/");
+      router.refresh();
+    }
   }
 
   function getFirstWorkingWeight(exerciseName: string): number {
@@ -226,15 +281,19 @@ export default function SessionPage() {
   }
 
   const exercises = session.template.exercises;
-  const allSetsCompleted = session.exerciseSets.every((s) => s.completed);
+  const completedSets = session.exerciseSets.filter((s) => s.completed).length;
+  const totalSets = session.exerciseSets.length;
+  const allSetsCompleted = completedSets === totalSets;
 
   return (
     <div className="space-y-6 pb-8">
+      <Confetti show={showConfetti} achievements={xpGain?.newAchievements} />
+
       <header className="flex items-center justify-between pt-4">
         <div>
           <h1 className="text-xl font-bold text-white">{session.template.name}</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            {exercises.length} exercises · {session.exerciseSets.length} sets
+            {exercises.length} exercises · {totalSets} sets
             {elapsed > 0 && (
               <span className="ml-3 text-indigo-400 font-mono">{formatDuration(elapsed)}</span>
             )}
@@ -248,6 +307,17 @@ export default function SessionPage() {
         </button>
       </header>
 
+      <ProgressRing completed={completedSets} total={totalSets} />
+
+      {xpGain && (
+        <div className="bg-zinc-900 border border-indigo-500/50 rounded-xl p-4 text-center animate-pulse">
+          <p className="text-2xl font-bold text-indigo-400">+{xpGain.xp} XP!</p>
+          <p className="text-xs text-zinc-400 mt-1">
+            {xpGain.levelName} · Lv. {xpGain.level}
+          </p>
+        </div>
+      )}
+
       {exercises.map((exercise) => {
         const exerciseSets = session.exerciseSets
           .filter((s) => s.exerciseName === exercise.exerciseName)
@@ -257,6 +327,7 @@ export default function SessionPage() {
         const completedCount = exerciseSets.filter((s) => s.completed).length;
         const volumePR = getVolumePR(exercise.exerciseName);
         const workingWeight = getFirstWorkingWeight(exercise.exerciseName);
+        const prevBestE1RM = getPreviousBestE1RM(exercise.exerciseName);
 
         return (
           <section key={exercise.id} className="space-y-3">
@@ -266,7 +337,7 @@ export default function SessionPage() {
                 {completedCount}/{exercise.sets} sets
               </span>
               {volumePR && (
-                <span className="text-[10px] bg-amber-900/50 text-amber-400 px-1.5 py-0.5 rounded font-bold animate-pulse">
+                <span className="text-[10px] bg-amber-900/50 text-amber-400 px-1.5 py-0.5 rounded font-bold">
                   PR! {volumePR.current}kg
                 </span>
               )}
@@ -290,14 +361,17 @@ export default function SessionPage() {
               )}
             </div>
 
-            {workingWeight > 0 && (
-              <WarmupCalculator workingWeight={workingWeight} />
-            )}
+            {workingWeight > 0 && <WarmupCalculator workingWeight={workingWeight} />}
 
             {prev && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2">
                 <p className="text-xs text-zinc-500">
-                  Last time ({prev.templateName}, {new Date(prev.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}):
+                  Last time ({prev.templateName},{" "}
+                  {new Date(prev.date).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                  ):
                 </p>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
                   {prev.sets.map((ps, i) => (
@@ -320,8 +394,10 @@ export default function SessionPage() {
                     initialWeight={es.weight || undefined}
                     initialReps={es.reps || undefined}
                     initialRpe={es.rpe}
+                    initialFeeling={es.feeling}
                     onSave={(data) => handleSaveSet(es.id, data)}
                     previous={prevSet || null}
+                    previousBestE1RM={prevBestE1RM}
                   />
                 );
               })}
@@ -340,7 +416,7 @@ export default function SessionPage() {
         </button>
         {!allSetsCompleted && (
           <p className="text-center text-xs text-zinc-600 mt-2">
-            {session.exerciseSets.filter((s) => !s.completed).length} sets remaining
+            {totalSets - completedSets} sets remaining
           </p>
         )}
       </div>

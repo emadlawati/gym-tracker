@@ -33,6 +33,16 @@ export default function RestTimer() {
 
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
+  const percent = duration > 0 ? ((duration - remaining) / duration) * 100 : 0;
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percent / 100) * circumference;
+
+  const getColor = () => {
+    if (percent >= 90) return "#f87171";
+    if (percent >= 50) return "#fbbf24";
+    return "#34d399";
+  };
 
   const presets = [30, 60, 90, 120, 180];
 
@@ -64,11 +74,27 @@ export default function RestTimer() {
           </button>
         </div>
       ) : (
-        <button onClick={stop} className="bg-indigo-600 text-white rounded-xl px-5 py-3 shadow-2xl text-center hover:bg-indigo-500 transition-colors">
-          <div className="text-2xl font-mono font-bold tabular-nums">
-            {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+        <button onClick={stop} className="relative bg-indigo-600 text-white rounded-full w-16 h-16 shadow-2xl hover:bg-indigo-500 transition-colors flex items-center justify-center">
+          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r={radius} fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="4" />
+            <circle
+              cx="32"
+              cy="32"
+              r={radius}
+              fill="none"
+              stroke={running ? getColor() : "#34d399"}
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={running ? offset : 0}
+              className="transition-all duration-1000"
+            />
+          </svg>
+          <div className="relative z-10 text-center">
+            <div className="text-xs font-mono font-bold tabular-nums">
+              {remaining > 0 ? `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}` : "GO!"}
+            </div>
           </div>
-          <div className="text-xs text-indigo-200 mt-0.5">{running ? "tap to stop" : "Done!"}</div>
         </button>
       )}
     </div>

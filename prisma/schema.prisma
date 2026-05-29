@@ -37,6 +37,7 @@ model WorkoutSession {
   notes        String?
   completed    Boolean         @default(false)
   duration     Int?
+  xpEarned     Int?
   exerciseSets ExerciseSet[]
   createdAt    DateTime        @default(now())
 }
@@ -51,6 +52,7 @@ model ExerciseSet {
   reps         Int            @default(0)
   rpe          Float?
   completed    Boolean        @default(false)
+  feeling      String?
   createdAt    DateTime       @default(now())
 }
 
@@ -67,4 +69,26 @@ model ExerciseSettingsEntry {
   settings     String   @default("{}")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model UserProfile {
+  id              String @id @default("default")
+  currentXP       Int    @default(0)
+  lifetimeVolume  Int    @default(0)
+  totalSessions   Int    @default(0)
+  totalPRs        Int    @default(0)
+  currentStreak   Int    @default(0)
+  bestStreak      Int    @default(0)
+  lastWorkoutDate DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Achievement {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  tier       String   @default("bronze")
+  unlockedAt DateTime?
+  progress   Float    @default(0)
+  createdAt  DateTime @default(now())
 }

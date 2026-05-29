@@ -3,6 +3,10 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatRelativeDate, calculateStreak } from "@/lib/utils";
+import { getLevel, VOLUME_MILESTONES } from "@/lib/game";
+import Heatmap from "@/components/Heatmap";
+import LevelBadge from "@/components/LevelBadge";
+import WeeklyReport from "@/components/WeeklyReport";
 
 export default async function DashboardPage() {
   const templates = await prisma.workoutTemplate.findMany({
@@ -41,12 +45,50 @@ export default async function DashboardPage() {
   thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
   thisWeekStart.setHours(0, 0, 0, 0);
 
-  const workoutsThisWeek = await prisma.workoutSession.count({
+  const thisWeekEnd = new Date(thisWeekStart);
+  thisWeekEnd.setDate(thisWeekEnd.getDate() + 7);
+
+  const sessionsThisWeek = await prisma.workoutSession.findMany({
     where: {
       completed: true,
-      date: { gte: thisWeekStart },
+      date: { gte: thisWeekStart, lt: thisWeekEnd },
     },
+    include: { exerciseSets: true },
   });
+
+  const workoutsThisWeek = sessionsThisWeek.length;
+  const weekVolume = sessionsThisWeek.reduce(
+    (sum, s) =>
+      sum +
+      s.exerciseSets
+        .filter((es) => es.completed)
+        .reduce((s2, es) => s2 + es.weight * es.reps, 0),
+    0
+  );
+
+  const profile = await prisma.userProfile.findUnique({ where: { id: "default" } });
+  const level = getLevel(profile?.currentXP || 0);
+
+  const heatmapSessions = await prisma.workoutSession.findMany({
+    where: { completed: true },
+    select: { date: true, exerciseSets: { where: { completed: true } } },
+    orderBy: { date: "desc" },
+  });
+
+  const heatmapData = heatmapSessions.map((s) => ({
+    date: s.date.toISOString(),
+    volume: s.exerciseSets.reduce((sum, es) => sum + es.weight * es.reps, 0),
+  }));
+
+  const nextMilestone = VOLUME_MILESTONES.find(
+    (m) => m.kg > (profile?.lifetimeVolume || 0)
+  );
+
+  const lv = profile?.lifetimeVolume || 0;
+  const milestoneLabel = nextMilestone?.label || "A galaxy far away...";
+  const milestonePct = nextMilestone
+    ? Math.min(100, Math.round((lv / nextMilestone.kg) * 100))
+    : 100;
 
   return (
     <div className="space-y-8">
@@ -59,20 +101,60 @@ export default async function DashboardPage() {
         </p>
       </header>
 
+      <LevelBadge
+        totalXP={profile?.currentXP || 0}
+        level={level.level}
+        currentLevelXP={level.currentLevelXP}
+        nextLevelXP={level.nextLevelXP}
+      />
+
       <section className="grid grid-cols-3 gap-2">
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center">
           <p className="text-2xl font-bold text-white">{totalWorkouts}</p>
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">Workouts</p>
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">Sessions</p>
         </div>
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center">
-          <p className={`text-2xl font-bold ${streak > 0 ? "text-amber-400" : "text-white"}`}>{streak}</p>
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">Day Streak</p>
+          <p className={`text-2xl font-bold ${streak > 0 ? "text-amber-400" : "text-white"}`}>
+            {streak}
+          </p>
+          <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">Streak</p>
         </div>
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-center">
           <p className="text-2xl font-bold text-white">{workoutsThisWeek}</p>
           <p className="text-[10px] text-zinc-500 uppercase tracking-wider mt-0.5">This Week</p>
         </div>
       </section>
+
+      <WeeklyReport
+        sessionsThisWeek={workoutsThisWeek}
+        totalVolume={weekVolume}
+        newPRs={0}
+        sessionsPlanned={3}
+      />
+
+      <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+          Activity
+        </h3>
+        <Heatmap sessions={heatmapData} />
+      </section>
+
+      {lv > 0 && nextMilestone && (
+        <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-2">
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+            Lifetime Volume: {lv.toLocaleString()}kg
+          </p>
+          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-600 to-pink-500 rounded-full transition-all"
+              style={{ width: `${milestonePct}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-zinc-500">
+            Next: {milestoneLabel} ({milestonePct}%)
+          </p>
+        </section>
+      )}
 
       {latestWeight && (
         <Link
@@ -114,7 +196,8 @@ export default async function DashboardPage() {
                     {t.name}
                   </h3>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    {t.exercises.length} exercises · {t.exercises.reduce((sum, e) => sum + e.sets, 0)} total sets
+                    {t.exercises.length} exercises ·{" "}
+                    {t.exercises.reduce((sum, e) => sum + e.sets, 0)} total sets
                   </p>
                 </div>
                 <span className="text-indigo-500 text-lg group-hover:translate-x-1 transition-transform">
@@ -132,7 +215,10 @@ export default async function DashboardPage() {
             <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">
               Recent Sessions
             </h2>
-            <Link href="/history" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+            <Link
+              href="/history"
+              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
               View all →
             </Link>
           </div>
@@ -145,7 +231,12 @@ export default async function DashboardPage() {
               >
                 <div>
                   <span className="text-sm font-medium text-white">{s.template.name}</span>
-                  <span className="text-xs text-zinc-500 ml-2">{formatRelativeDate(s.date)}</span>
+                  <span className="text-xs text-zinc-500 ml-2">
+                    {formatRelativeDate(s.date)}
+                  </span>
+                  {s.xpEarned && (
+                    <span className="text-[10px] text-indigo-400 ml-1">+{s.xpEarned}XP</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   {s.completed ? (
@@ -157,28 +248,6 @@ export default async function DashboardPage() {
                 </div>
               </Link>
             ))}
-          </div>
-        </section>
-      )}
-
-      {templates.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Exercises</h2>
-          <div className="grid gap-2">
-            {(() => {
-              const exercises = templates.flatMap((t) => t.exercises.map((e) => e.exerciseName));
-              const unique = [...new Set(exercises)];
-              return unique.map((name) => (
-                <Link
-                  key={name}
-                  href={`/progress/${encodeURIComponent(name)}`}
-                  className="flex items-center justify-between bg-zinc-900 border border-zinc-800 hover:border-indigo-500/50 rounded-lg px-4 py-3 transition-colors"
-                >
-                  <span className="text-sm text-white">{name}</span>
-                  <span className="text-xs text-indigo-400">Progress →</span>
-                </Link>
-              ));
-            })()}
           </div>
         </section>
       )}
