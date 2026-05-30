@@ -12,7 +12,6 @@ export async function setUserIdCookie(id: string) {
   c.set(COOKIE_NAME, id, {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
-    httpOnly: true,
     sameSite: "lax",
   });
 }

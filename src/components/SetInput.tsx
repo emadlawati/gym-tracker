@@ -9,7 +9,8 @@ interface Props {
   initialReps?: number;
   initialRpe?: number | null;
   initialFeeling?: string | null;
-  onSave: (data: { weight: number; reps: number; rpe: number | null; feeling: string | null }) => void;
+  initialSetType?: string | null;
+  onSave: (data: { weight: number; reps: number; rpe: number | null; feeling: string | null; setType: string | null }) => void;
   onLogAndRest?: () => void;
   previous?: { weight: number; reps: number; rpe: number | null } | null;
   previousBestWeight?: number;
@@ -25,13 +26,14 @@ const FEELINGS = [
 ];
 
 export default function SetInput({
-  setNumber, initialWeight, initialReps, initialRpe, initialFeeling,
+  setNumber, initialWeight, initialReps, initialRpe, initialFeeling, initialSetType,
   onSave, onLogAndRest, previous, previousBestWeight, previousBestReps,
 }: Props) {
   const [weight, setWeight] = useState(initialWeight ?? 0);
   const [reps, setReps] = useState(initialReps ?? 0);
   const [rpe, setRpe] = useState(initialRpe ?? null as number | null);
   const [feeling, setFeeling] = useState<string | null>(initialFeeling ?? null);
+  const [setType, setSetType] = useState<string | null>(initialSetType ?? "working");
   const [saved, setSaved] = useState(!!initialWeight && !!initialReps);
   const [flashing, setFlashing] = useState(false);
 
@@ -42,7 +44,7 @@ export default function SetInput({
   const prLabel = isWeightPR ? "Weight PR!" : "Rep PR!";
 
   const handleSave = () => {
-    onSave({ weight, reps, rpe, feeling });
+    onSave({ weight, reps, rpe, feeling, setType });
     setSaved(true);
     setFlashing(true);
     setTimeout(() => setFlashing(false), 800);
@@ -137,15 +139,19 @@ export default function SetInput({
       <div className="flex items-center gap-1.5">
         <span className="text-[10px] text-zinc-600">Feeling</span>
         {FEELINGS.map((f) => (
-          <button
-            key={f.emoji} type="button" onClick={() => setFeeling(f.emoji)}
-            className={`text-xl p-1.5 rounded-lg transition-all active:scale-90 ${
-              feeling === f.emoji ? "bg-zinc-700 ring-1 ring-zinc-600 scale-110" : "opacity-40 hover:opacity-80"
-            }`}
-            title={f.label}
-          >
-            {f.emoji}
-          </button>
+          <button key={f.emoji} type="button" onClick={() => setFeeling(f.emoji)}
+            className={`text-xl p-1.5 rounded-lg transition-all active:scale-90 ${feeling === f.emoji ? "bg-zinc-700 ring-1 ring-zinc-600 scale-110" : "opacity-40 hover:opacity-80"}`}
+            title={f.label}>{f.emoji}</button>
+        ))}
+      </div>
+
+      <div className="flex gap-1 flex-wrap">
+        <span className="text-[10px] text-zinc-600 self-center mr-1">Type</span>
+        {["warmup", "working", "drop", "failure"].map((t) => (
+          <button key={t} type="button" onClick={() => setSetType(t)}
+            className={`px-2 py-1 rounded text-[10px] font-medium transition-all active:scale-95 ${
+              setType === t ? "bg-indigo-600 text-white" : "bg-zinc-700/50 text-zinc-500 hover:bg-zinc-700"
+            }`}>{t}</button>
         ))}
       </div>
 

@@ -11,7 +11,7 @@ interface Props {
     completed: boolean;
     date: Date | string;
     exerciseSets: { exerciseName: string; completed: boolean }[];
-    template: { name: string };
+    template: { name: string } | null;
   }[];
 }
 
@@ -37,7 +37,7 @@ export default function HistoryList({ sessions }: Props) {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white">{s.template.name}</span>
+                    <span className="text-sm font-medium text-white">{s.template?.name || "Workout"}</span>
                     {s.completed ? (
                       <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-1.5 py-0.5 rounded font-medium">Done</span>
                     ) : (

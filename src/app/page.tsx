@@ -6,6 +6,8 @@ import { formatRelativeDate, calculateStreak } from "@/lib/utils";
 import { getLevel, VOLUME_MILESTONES, getIdentityTitle } from "@/lib/game";
 import Heatmap from "@/components/Heatmap";
 import LevelBadge from "@/components/LevelBadge";
+import MuscleHeatmap from "@/components/MuscleHeatmap";
+import { getMuscles } from "@/lib/muscles";
 import { getUserId } from "@/lib/cookies";
 
 export default async function DashboardPage() {
@@ -58,6 +60,22 @@ export default async function DashboardPage() {
     orderBy: { date: "desc" },
   });
   const heatmapData = heatmapSessions.map((s) => ({ date: s.date.toISOString(), volume: s.exerciseSets.reduce((sum, es) => sum + es.weight * es.reps, 0) }));
+
+  const muscleVolumes: Record<string, number> = {};
+  for (const s of sessionsThisWeek) {
+    for (const es of s.exerciseSets) {
+      if (!es.completed) continue;
+      const muscles = getMuscles(es.exerciseName);
+      const vol = es.weight * es.reps;
+      muscleVolumes[muscles.primary] = (muscleVolumes[muscles.primary] || 0) + vol;
+    }
+  }
+
+  const lastCompletedSession = await prisma.workoutSession.findFirst({
+    where: { userId, completed: true },
+    include: { template: { select: { name: true } } },
+    orderBy: { date: "desc" },
+  });
 
   const nextMilestone = VOLUME_MILESTONES.find((m) => m.kg > (profile?.lifetimeVolume || 0));
   const lv = profile?.lifetimeVolume || 0;
@@ -118,8 +136,12 @@ export default async function DashboardPage() {
             <LevelBadge totalXP={profile.currentXP || 0} level={level.level} currentLevelXP={level.currentLevelXP} nextLevelXP={level.nextLevelXP} />
           )}
 
-          {!isNewUser && heatmapData.length > 0 && (
-            <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+      {!isNewUser && heatmapData.length > 0 && (
+        <MuscleHeatmap muscleVolumes={muscleVolumes} />
+      )}
+
+      {!isNewUser && heatmapData.length > 0 && (
+        <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Activity</h3>
               <Heatmap sessions={heatmapData} />
             </section>
@@ -152,6 +174,20 @@ export default async function DashboardPage() {
       <section>
         <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2.5">Start Workout</h2>
         <div className="grid gap-2">
+          {lastCompletedSession && (
+            <Link
+              href={`/session/${lastCompletedSession.templateId || templates[0]?.id}`}
+              className="flex items-center justify-between bg-zinc-900 border border-indigo-500/20 hover:border-indigo-500/50 rounded-xl px-5 py-4 transition-all group active:scale-[0.99]"
+            >
+              <div>
+                <h3 className="font-semibold text-indigo-400 group-hover:text-indigo-300 transition-colors">Repeat Last Workout</h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  {lastCompletedSession.template?.name || "Workout"} · {new Date(lastCompletedSession.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                </p>
+              </div>
+              <span className="text-indigo-500 text-lg group-hover:translate-x-1 transition-transform">↻</span>
+            </Link>
+          )}
           {templates.length === 0 ? (
             <div className="bg-zinc-900 border border-dashed border-zinc-800 rounded-xl p-6 text-center">
               <p className="text-zinc-500 text-sm">No workout templates yet</p>
@@ -182,7 +218,7 @@ export default async function DashboardPage() {
             {recentSessions.map((s) => (
               <Link key={s.id} href={`/history/${s.id}`} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-4 py-3 transition-colors">
                 <div>
-                  <span className="text-sm font-medium text-white">{s.template.name}</span>
+                  <span className="text-sm font-medium text-white">{s.template?.name || "Workout"}</span>
                   <span className="text-xs text-zinc-500 ml-2">{formatRelativeDate(s.date)}</span>
                   {s.xpEarned && <span className="text-[10px] text-indigo-400 ml-1">+{s.xpEarned}XP</span>}
                 </div>

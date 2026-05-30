@@ -23,7 +23,16 @@ export function formatRelativeDate(date: Date | string): string {
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
   return formatDate(date);
+}
+
+export function isSameUTCDay(a: Date | string, b: Date | string): boolean {
+  const da = new Date(a);
+  const db = new Date(b);
+  return da.getUTCFullYear() === db.getUTCFullYear() &&
+    da.getUTCMonth() === db.getUTCMonth() &&
+    da.getUTCDate() === db.getUTCDate();
 }
 
 const PLATES = [20, 15, 10, 5, 2.5, 1.25];

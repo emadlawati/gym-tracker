@@ -5,50 +5,67 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
-  const { id } = await params;
-  const session = await prisma.workoutSession.findFirst({
-    where: { id, userId },
-    include: {
-      template: { include: { exercises: { orderBy: { sortOrder: "asc" } } } },
-      exerciseSets: { orderBy: [{ exerciseName: "asc" }, { setNumber: "asc" }] },
-    },
-  });
-  if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(session);
+  try {
+    const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
+    const { id } = await params;
+    const session = await prisma.workoutSession.findFirst({
+      where: { id, userId },
+      include: {
+        template: { include: { exercises: { orderBy: { sortOrder: "asc" } } } },
+        exerciseSets: { orderBy: [{ exerciseName: "asc" }, { setNumber: "asc" }] },
+      },
+    });
+    if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(session);
+  } catch {
+    return NextResponse.json({ error: "Failed to load session" }, { status: 500 });
+  }
 }
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
-  const { id } = await params;
-  const data = await req.json();
+  try {
+    const { id } = await params;
+    const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
+    const data = await req.json();
 
-  const session = await prisma.workoutSession.findFirst({ where: { id, userId } });
-  if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const session = await prisma.workoutSession.findFirst({ where: { id, userId } });
+    if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const updated = await prisma.workoutSession.update({
-    where: { id },
-    data,
-    include: {
-      template: { include: { exercises: { orderBy: { sortOrder: "asc" } } } },
-      exerciseSets: { orderBy: [{ exerciseName: "asc" }, { setNumber: "asc" }] },
-    },
-  });
-
-  return NextResponse.json(updated);
+    const updated = await prisma.workoutSession.update({
+      where: { id },
+      data: { completed: data.completed, duration: data.duration, notes: data.notes },
+      include: {
+        template: { include: { exercises: { orderBy: { sortOrder: "asc" } } } },
+        exerciseSets: { orderBy: [{ exerciseName: "asc" }, { setNumber: "asc" }] },
+      },
+    });
+    return NextResponse.json(updated);
+  } catch {
+    return NextResponse.json({ error: "Failed to update session" }, { status: 500 });
+  }
 }
 
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
-  const { id } = await params;
-  const session = await prisma.workoutSession.findFirst({ where: { id, userId } });
-  if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  await prisma.workoutSession.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  try {
+    const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
+    const { id } = await params;
+
+    const session = await prisma.workoutSession.findFirst({ where: { id, userId } });
+    if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    if (session.xpAwarded) {
+      return NextResponse.json({ error: "Cannot delete a session with awarded XP. Complete a new workout to offset." }, { status: 400 });
+    }
+
+    await prisma.workoutSession.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Failed to delete session" }, { status: 500 });
+  }
 }

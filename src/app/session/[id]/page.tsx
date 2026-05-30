@@ -23,6 +23,7 @@ interface ExerciseSet {
   id: string;
   exerciseName: string;
   setNumber: number;
+  setType: string | null;
   weight: number;
   reps: number;
   rpe: number | null;
@@ -103,7 +104,7 @@ export default function SessionPage() {
     return () => {};
   }, [params.id]);
 
-  async function handleSaveAndSync(setId: string, data: { weight: number; reps: number; rpe: number | null; feeling: string | null }) {
+  async function handleSaveAndSync(setId: string, data: { weight: number; reps: number; rpe: number | null; feeling: string | null; setType: string | null }) {
     await fetch(`/api/sets/${setId}`, {
       method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
     });
@@ -114,7 +115,7 @@ export default function SessionPage() {
   }
 
   function copyPreviousToSet(setId: string, ps: { weight: number; reps: number; rpe: number | null }) {
-    handleSaveAndSync(setId, { weight: ps.weight, reps: ps.reps, rpe: ps.rpe, feeling: null });
+    handleSaveAndSync(setId, { weight: ps.weight, reps: ps.reps, rpe: ps.rpe, feeling: null, setType: "working" });
   }
 
   function getVolumePR(exerciseName: string): { current: number; previous: number } | null {
@@ -132,8 +133,12 @@ export default function SessionPage() {
   function getPreviousBest(exerciseName: string): { bestWeight: number; bestReps: number } {
     const prev = previousData.get(exerciseName);
     if (!prev || prev.sets.length === 0) return { bestWeight: 0, bestReps: 0 };
-    let bestWeight = 0, bestReps = 0;
-    for (const s of prev.sets) { if (s.weight >= bestWeight && s.reps >= bestReps) { bestWeight = s.weight; bestReps = s.reps; } }
+    let bestWeight = 0;
+    let bestReps = 0;
+    for (const s of prev.sets) {
+      if (s.weight > bestWeight) bestWeight = s.weight;
+      if (s.reps > bestReps) bestReps = s.reps;
+    }
     return { bestWeight, bestReps };
   }
 
@@ -201,7 +206,7 @@ export default function SessionPage() {
 
       <header className="flex items-center justify-between pt-4">
         <div>
-          <h1 className="text-xl font-bold text-white">{session.template.name}</h1>
+          <h1 className="text-xl font-bold text-white">{session.template?.name || "Workout"}</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
             {exercises.length} exercises · {totalSets} sets
             {elapsed > 0 && <span className="ml-3 text-indigo-400 font-mono tabular-nums">{formatDuration(elapsed)}</span>}
@@ -289,10 +294,11 @@ export default function SessionPage() {
                   <SetInput
                     key={es.id}
                     setNumber={es.setNumber}
-                    initialWeight={es.weight || prevSet?.weight || undefined}
-                    initialReps={es.reps || prevSet?.reps || undefined}
+                    initialWeight={es.weight !== 0 ? es.weight : (prevSet?.weight || undefined)}
+                    initialReps={es.reps !== 0 ? es.reps : (prevSet?.reps || undefined)}
                     initialRpe={es.rpe}
                     initialFeeling={es.feeling}
+                    initialSetType={es.setType}
                     onSave={(data) => handleSaveAndSync(es.id, data)}
                     previous={prevSet || null}
                     previousBestWeight={prevBest.bestWeight || undefined}

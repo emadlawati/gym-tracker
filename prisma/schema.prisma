@@ -42,8 +42,8 @@ model TemplateExercise {
 
 model WorkoutSession {
   id           String          @id @default(cuid())
-  templateId   String
-  template     WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateId   String?
+  template     WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   userId       String
   user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   date         DateTime        @default(now())
@@ -51,6 +51,7 @@ model WorkoutSession {
   completed    Boolean         @default(false)
   duration     Int?
   xpEarned     Int?
+  xpAwarded    Boolean         @default(false)
   exerciseSets ExerciseSet[]
   createdAt    DateTime        @default(now())
 }
@@ -61,6 +62,7 @@ model ExerciseSet {
   session      WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exerciseName String
   setNumber    Int
+  setType      String?        @default("working")
   weight       Float          @default(0)
   reps         Int            @default(0)
   rpe          Float?

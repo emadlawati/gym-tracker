@@ -38,7 +38,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
     <div className="space-y-6 pt-4">
       <div>
         <Link href="/history" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">← History</Link>
-        <h1 className="text-xl font-bold text-white mt-1">{session.template.name}</h1>
+        <h1 className="text-xl font-bold text-white mt-1">{session.template?.name || "Workout"}</h1>
         <p className="text-sm text-zinc-500 mt-0.5">
           {formatDate(session.date)}
           {session.completed ? " · Completed" : " · In Progress"}

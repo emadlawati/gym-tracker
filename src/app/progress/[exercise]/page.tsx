@@ -27,7 +27,7 @@ export default async function ProgressPage({ params }: { params: Promise<{ exerc
   for (const s of sets) {
     const key = s.sessionId;
     if (!sessionsMap.has(key)) {
-      sessionsMap.set(key, { date: s.session.date.toISOString(), templateName: s.session.template.name, sets: [] });
+      sessionsMap.set(key, { date: s.session.date.toISOString(), templateName: s.session.template?.name || "Unknown", sets: [] });
     }
     sessionsMap.get(key)!.sets.push({ setNumber: s.setNumber, weight: s.weight, reps: s.reps, rpe: s.rpe });
   }

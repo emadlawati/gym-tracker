@@ -443,8 +443,8 @@ export function calculateSessionXP(
 
     if (prev) {
       if (e1rm > prev.bestE1RM) newWeightPRs++;
-      // Rep PR: same weight, more reps than previous best for that exercise
-      if (set.weight >= prev.bestWeight && set.reps > prev.bestReps && e1rm <= prev.bestE1RM) {
+      // Rep PR: same weight as previous best or higher, but more reps
+      else if (set.weight >= prev.bestWeight - 0.5 && set.reps > prev.bestReps) {
         newRepPRs++;
       }
     } else {

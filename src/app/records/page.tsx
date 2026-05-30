@@ -8,24 +8,21 @@ import { getUserId } from "@/lib/cookies";
 export default async function RecordsPage() {
   const userId = (await getUserId()) || "user_imad";
 
-  const exerciseNames = await prisma.exerciseSet.findMany({
-    where: { completed: true, session: { userId } },
-    select: { exerciseName: true },
-    distinct: ["exerciseName"],
-    orderBy: { exerciseName: "asc" },
+  const allSets = await prisma.exerciseSet.findMany({
+    where: { completed: true, weight: { gt: 0 }, reps: { gt: 0 }, session: { userId } },
+    include: { session: { select: { date: true } } },
+    orderBy: { createdAt: "desc" },
   });
+
+  const grouped = new Map<string, typeof allSets>();
+  for (const s of allSets) {
+    if (!grouped.has(s.exerciseName)) grouped.set(s.exerciseName, []);
+    grouped.get(s.exerciseName)!.push(s);
+  }
 
   const records: { exerciseName: string; bestWeight: number; bestReps: number; bestRPE: number | null; bestE1RM: number; bestVolume: number; bestSetDate: string }[] = [];
 
-  for (const { exerciseName } of exerciseNames) {
-    const sets = await prisma.exerciseSet.findMany({
-      where: { exerciseName, completed: true, weight: { gt: 0 }, reps: { gt: 0 }, session: { userId } },
-      include: { session: { select: { date: true } } },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (sets.length === 0) continue;
-
+  for (const [exerciseName, sets] of grouped) {
     let bestE1RM = 0, bestVolume = 0, bestWeight = 0, bestReps = 0, bestRPE: number | null = null, bestSetDate = "";
     for (const s of sets) {
       const e1rm = estimate1RM(s.weight, s.reps);
@@ -33,7 +30,6 @@ export default async function RecordsPage() {
       const vol = s.weight * s.reps;
       if (vol > bestVolume) bestVolume = vol;
     }
-
     records.push({ exerciseName, bestWeight, bestReps, bestRPE, bestE1RM, bestVolume, bestSetDate });
   }
 
