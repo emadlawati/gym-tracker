@@ -7,14 +7,18 @@ import { getLevel, VOLUME_MILESTONES, getIdentityTitle } from "@/lib/game";
 import Heatmap from "@/components/Heatmap";
 import LevelBadge from "@/components/LevelBadge";
 import WeeklyReport from "@/components/WeeklyReport";
+import { getUserId } from "@/lib/cookies";
 
 export default async function DashboardPage() {
+  const userId = (await getUserId()) || "user_imad";
+
   const templates = await prisma.workoutTemplate.findMany({
     include: { exercises: { orderBy: { sortOrder: "asc" } } },
     orderBy: { createdAt: "asc" },
   });
 
   const recentSessions = await prisma.workoutSession.findMany({
+    where: { userId },
     take: 5,
     include: {
       template: { select: { name: true } },
@@ -24,7 +28,7 @@ export default async function DashboardPage() {
   });
 
   const allCompletedSessions = await prisma.workoutSession.findMany({
-    where: { completed: true },
+    where: { completed: true, userId },
     select: { date: true },
     orderBy: { date: "desc" },
   });
@@ -32,13 +36,14 @@ export default async function DashboardPage() {
   const streak = calculateStreak(allCompletedSessions.map((s) => s.date));
 
   const latestWeight = await prisma.bodyWeight.findFirst({
+    where: { userId },
     orderBy: { date: "desc" },
   });
 
   const lastSession = recentSessions[0];
 
   const totalWorkouts = await prisma.workoutSession.count({
-    where: { completed: true },
+    where: { completed: true, userId },
   });
 
   const thisWeekStart = new Date();
@@ -49,10 +54,7 @@ export default async function DashboardPage() {
   thisWeekEnd.setDate(thisWeekEnd.getDate() + 7);
 
   const sessionsThisWeek = await prisma.workoutSession.findMany({
-    where: {
-      completed: true,
-      date: { gte: thisWeekStart, lt: thisWeekEnd },
-    },
+    where: { completed: true, userId, date: { gte: thisWeekStart, lt: thisWeekEnd } },
     include: { exerciseSets: true },
   });
 
@@ -66,10 +68,12 @@ export default async function DashboardPage() {
     0
   );
 
-  const profile = await prisma.userProfile.findUnique({ where: { id: "default" } });
+  const profile = await prisma.userProfile.findUnique({ where: { userId } });
   const level = getLevel(profile?.currentXP || 0);
 
-  const allAchs = await prisma.achievement.findMany({ where: { unlockedAt: { not: null } } });
+  const allAchs = await prisma.achievement.findMany({
+    where: { userId, unlockedAt: { not: null } },
+  });
   const identity = getIdentityTitle({
     totalSessions: profile?.totalSessions || 0,
     bestStreak: profile?.bestStreak || 0,
@@ -78,7 +82,7 @@ export default async function DashboardPage() {
   });
 
   const heatmapSessions = await prisma.workoutSession.findMany({
-    where: { completed: true },
+    where: { completed: true, userId },
     select: { date: true, exerciseSets: { where: { completed: true } } },
     orderBy: { date: "desc" },
   });
@@ -146,9 +150,7 @@ export default async function DashboardPage() {
       />
 
       <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
-          Activity
-        </h3>
+        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Activity</h3>
         <Heatmap sessions={heatmapData} />
       </section>
 
@@ -190,10 +192,7 @@ export default async function DashboardPage() {
           {templates.length === 0 ? (
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 text-center">
               <p className="text-zinc-500 text-sm">No workout templates yet.</p>
-              <Link
-                href="/workouts"
-                className="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-500 transition-colors"
-              >
+              <Link href="/workouts" className="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-500 transition-colors">
                 Create Workout
               </Link>
             </div>
@@ -205,17 +204,12 @@ export default async function DashboardPage() {
                 className="flex items-center justify-between bg-zinc-900 border border-zinc-800 hover:border-indigo-500/50 rounded-xl px-5 py-4 transition-all group"
               >
                 <div>
-                  <h3 className="font-semibold text-white group-hover:text-indigo-400 transition-colors">
-                    {t.name}
-                  </h3>
+                  <h3 className="font-semibold text-white group-hover:text-indigo-400 transition-colors">{t.name}</h3>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    {t.exercises.length} exercises ·{" "}
-                    {t.exercises.reduce((sum, e) => sum + e.sets, 0)} total sets
+                    {t.exercises.length} exercises · {t.exercises.reduce((sum, e) => sum + e.sets, 0)} total sets
                   </p>
                 </div>
-                <span className="text-indigo-500 text-lg group-hover:translate-x-1 transition-transform">
-                  →
-                </span>
+                <span className="text-indigo-500 text-lg group-hover:translate-x-1 transition-transform">→</span>
               </Link>
             ))
           )}
@@ -225,15 +219,8 @@ export default async function DashboardPage() {
       {recentSessions.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">
-              Recent Sessions
-            </h2>
-            <Link
-              href="/history"
-              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-            >
-              View all →
-            </Link>
+            <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Recent Sessions</h2>
+            <Link href="/history" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">View all →</Link>
           </div>
           <div className="space-y-1.5">
             {recentSessions.map((s) => (
@@ -244,12 +231,8 @@ export default async function DashboardPage() {
               >
                 <div>
                   <span className="text-sm font-medium text-white">{s.template.name}</span>
-                  <span className="text-xs text-zinc-500 ml-2">
-                    {formatRelativeDate(s.date)}
-                  </span>
-                  {s.xpEarned && (
-                    <span className="text-[10px] text-indigo-400 ml-1">+{s.xpEarned}XP</span>
-                  )}
+                  <span className="text-xs text-zinc-500 ml-2">{formatRelativeDate(s.date)}</span>
+                  {s.xpEarned && <span className="text-[10px] text-indigo-400 ml-1">+{s.xpEarned}XP</span>}
                 </div>
                 <div className="flex items-center gap-3">
                   {s.completed ? (

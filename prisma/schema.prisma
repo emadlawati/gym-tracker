@@ -7,6 +7,16 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id        String            @id @default(cuid())
+  name      String
+  sessions  WorkoutSession[]
+  weights   BodyWeight[]
+  profile   UserProfile?
+  achievements Achievement[]
+  createdAt DateTime          @default(now())
+}
+
 model WorkoutTemplate {
   id        String              @id @default(cuid())
   name      String              @unique
@@ -33,6 +43,8 @@ model WorkoutSession {
   id           String          @id @default(cuid())
   templateId   String
   template     WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   date         DateTime        @default(now())
   notes        String?
   completed    Boolean         @default(false)
@@ -58,6 +70,8 @@ model ExerciseSet {
 
 model BodyWeight {
   id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   weight    Float
   date      DateTime @default(now())
   createdAt DateTime @default(now())
@@ -72,23 +86,29 @@ model ExerciseSettingsEntry {
 }
 
 model UserProfile {
-  id              String @id @default("default")
-  currentXP       Int    @default(0)
-  lifetimeVolume  Int    @default(0)
-  totalSessions   Int    @default(0)
-  totalPRs        Int    @default(0)
-  currentStreak   Int    @default(0)
-  bestStreak      Int    @default(0)
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentXP       Int       @default(0)
+  lifetimeVolume  Int       @default(0)
+  totalSessions   Int       @default(0)
+  totalPRs        Int       @default(0)
+  currentStreak   Int       @default(0)
+  bestStreak      Int       @default(0)
   lastWorkoutDate DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Achievement {
-  id         String   @id @default(cuid())
-  key        String   @unique
-  tier       String   @default("bronze")
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key        String
+  tier       String    @default("bronze")
   unlockedAt DateTime?
-  progress   Float    @default(0)
-  createdAt  DateTime @default(now())
+  progress   Float     @default(0)
+  createdAt  DateTime  @default(now())
+
+  @@unique([userId, key])
 }

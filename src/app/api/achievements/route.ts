@@ -1,27 +1,25 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAllAchievementDefs, checkAllAchievements } from "@/lib/game";
 
-export async function GET() {
-  const bodyweightEntry = await prisma.bodyWeight.findFirst({ orderBy: { date: "desc" } });
+export async function GET(req: NextRequest) {
+  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
+
+  const bodyweightEntry = await prisma.bodyWeight.findFirst({ where: { userId }, orderBy: { date: "desc" } });
   const bodyweight = bodyweightEntry?.weight || null;
 
-  const profile = await prisma.userProfile.findUnique({ where: { id: "default" } });
-  const exerciseBests = await getExerciseBests();
+  const profile = await prisma.userProfile.findUnique({ where: { userId } });
+  const exerciseBests = await getExerciseBests(userId);
   const uniqueExercises = await prisma.exerciseSet.findMany({
-    where: { completed: true },
+    where: { completed: true, session: { userId } },
     select: { exerciseName: true },
     distinct: ["exerciseName"],
   });
-  const totalSets = await prisma.exerciseSet.count({ where: { completed: true } });
-  const rpe10Sets = await prisma.exerciseSet.count({
-    where: { completed: true, rpe: { gte: 10 } },
-  });
+  const totalSets = await prisma.exerciseSet.count({ where: { completed: true, session: { userId } } });
+  const rpe10Sets = await prisma.exerciseSet.count({ where: { completed: true, session: { userId }, rpe: { gte: 10 } } });
 
-  const level = await (async () => {
-    const { getLevel } = await import("@/lib/game");
-    return getLevel(profile?.currentXP || 0);
-  })();
+  const { getLevel } = await import("@/lib/game");
+  const level = getLevel(profile?.currentXP || 0);
 
   const evalProfile = {
     bodyweight,
@@ -42,7 +40,7 @@ export async function GET() {
   };
 
   const results = checkAllAchievements(evalProfile);
-  const unlocked = await prisma.achievement.findMany({ where: { unlockedAt: { not: null } } });
+  const unlocked = await prisma.achievement.findMany({ where: { userId, unlockedAt: { not: null } } });
   const allDefs = getAllAchievementDefs();
 
   const achievements = allDefs.map((def) => {
@@ -70,18 +68,16 @@ export async function POST() {
   return NextResponse.json({});
 }
 
-async function getExerciseBests() {
+async function getExerciseBests(userId: string) {
   const sets = await prisma.exerciseSet.findMany({
-    where: { completed: true, weight: { gt: 0 } },
+    where: { completed: true, weight: { gt: 0 }, session: { userId } },
     orderBy: { createdAt: "asc" },
   });
-
   const map = new Map<string, typeof sets>();
   for (const s of sets) {
     if (!map.has(s.exerciseName)) map.set(s.exerciseName, []);
     map.get(s.exerciseName)!.push(s);
   }
-
   return Array.from(map.entries()).map(([name, exSets]) => {
     let bestE1RM = 0, bestWeight = 0, bestReps = 0, bestVolume = 0;
     for (const s of exSets) {

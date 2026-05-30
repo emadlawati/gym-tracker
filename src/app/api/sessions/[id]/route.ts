@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
   const { id } = await params;
-  const session = await prisma.workoutSession.findUnique({
-    where: { id },
+  const session = await prisma.workoutSession.findFirst({
+    where: { id, userId },
     include: {
       template: { include: { exercises: { orderBy: { sortOrder: "asc" } } } },
       exerciseSets: { orderBy: [{ exerciseName: "asc" }, { setNumber: "asc" }] },
@@ -21,10 +22,14 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
   const { id } = await params;
   const data = await req.json();
 
-  const session = await prisma.workoutSession.update({
+  const session = await prisma.workoutSession.findFirst({ where: { id, userId } });
+  if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const updated = await prisma.workoutSession.update({
     where: { id },
     data,
     include: {
@@ -33,14 +38,17 @@ export async function PUT(
     },
   });
 
-  return NextResponse.json(session);
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
   const { id } = await params;
+  const session = await prisma.workoutSession.findFirst({ where: { id, userId } });
+  if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
   await prisma.workoutSession.delete({ where: { id } });
   return NextResponse.json({ success: true });
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
+  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
   const exerciseName = req.nextUrl.searchParams.get("exerciseName");
 
   if (!exerciseName) {
@@ -12,6 +13,7 @@ export async function GET(req: NextRequest) {
     where: {
       exerciseName,
       completed: true,
+      session: { userId },
     },
     include: {
       session: {
@@ -50,7 +52,7 @@ export async function GET(req: NextRequest) {
   const history = Array.from(sessionsMap.values());
 
   const allExercises = await prisma.exerciseSet.findMany({
-    where: { completed: true },
+    where: { completed: true, session: { userId } },
     select: { exerciseName: true },
     distinct: ["exerciseName"],
     orderBy: { exerciseName: "asc" },

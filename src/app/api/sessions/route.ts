@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
   const sessions = await prisma.workoutSession.findMany({
+    where: { userId },
     include: {
       template: { select: { name: true } },
       _count: { select: { exerciseSets: true } },
@@ -13,6 +15,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
   const { templateId, notes } = await req.json();
 
   const template = await prisma.workoutTemplate.findUnique({
@@ -27,6 +30,7 @@ export async function POST(req: NextRequest) {
   const session = await prisma.workoutSession.create({
     data: {
       templateId,
+      userId,
       notes: notes || null,
       exerciseSets: {
         create: template.exercises.flatMap((ex) =>

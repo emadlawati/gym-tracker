@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
+  const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
   const exerciseName = req.nextUrl.searchParams.get("exerciseName");
   const sessionId = req.nextUrl.searchParams.get("excludeSessionId");
 
@@ -13,6 +14,7 @@ export async function GET(req: NextRequest) {
     where: {
       exerciseName,
       completed: true,
+      session: { userId },
       ...(sessionId ? { sessionId: { not: sessionId } } : {}),
     },
     include: {
