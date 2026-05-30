@@ -12,10 +12,30 @@ body {
   color: #fafafa;
   font-family: var(--font-geist-sans, system-ui, sans-serif);
   -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
 }
 
-button, a {
+button, a, input, select {
   -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (max-width: 380px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 381px) and (max-width: 420px) {
+  html {
+    font-size: 15px;
+  }
 }
 
 ::selection {

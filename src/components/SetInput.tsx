@@ -46,6 +46,7 @@ export default function SetInput({
     setSaved(true);
     setFlashing(true);
     setTimeout(() => setFlashing(false), 800);
+    if (navigator.vibrate) navigator.vibrate(10);
   };
 
   const adjustWeight = (delta: number) => {
