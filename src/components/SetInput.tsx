@@ -10,6 +10,7 @@ interface Props {
   initialRpe?: number | null;
   initialFeeling?: string | null;
   onSave: (data: { weight: number; reps: number; rpe: number | null; feeling: string | null }) => void;
+  onLogAndRest?: () => void;
   previous?: { weight: number; reps: number; rpe: number | null } | null;
   previousBestWeight?: number;
   previousBestReps?: number;
@@ -24,37 +25,27 @@ const FEELINGS = [
 ];
 
 export default function SetInput({
-  setNumber,
-  initialWeight,
-  initialReps,
-  initialRpe,
-  initialFeeling,
-  onSave,
-  previous,
-  previousBestWeight,
-  previousBestReps,
+  setNumber, initialWeight, initialReps, initialRpe, initialFeeling,
+  onSave, onLogAndRest, previous, previousBestWeight, previousBestReps,
 }: Props) {
   const [weight, setWeight] = useState(initialWeight ?? 0);
   const [reps, setReps] = useState(initialReps ?? 0);
   const [rpe, setRpe] = useState(initialRpe ?? null as number | null);
   const [feeling, setFeeling] = useState<string | null>(initialFeeling ?? null);
   const [saved, setSaved] = useState(!!initialWeight && !!initialReps);
+  const [flashing, setFlashing] = useState(false);
 
   const e1rm = useMemo(() => estimate1RM(weight, reps), [weight, reps]);
   const isWeightPR = previousBestWeight != null && previousBestReps != null && e1rm > previousBestWeight * (1 + previousBestReps / 30);
-  const isRepPR =
-    previousBestWeight != null &&
-    previousBestReps != null &&
-    weight >= previousBestWeight &&
-    reps > previousBestReps &&
-    !isWeightPR;
-
+  const isRepPR = previousBestWeight != null && previousBestReps != null && weight >= previousBestWeight && reps > previousBestReps && !isWeightPR;
   const showPR = isWeightPR || isRepPR;
-  const prLabel = isWeightPR ? "NEW WEIGHT PR!" : isRepPR ? "NEW REP PR!" : "";
+  const prLabel = isWeightPR ? "Weight PR!" : "Rep PR!";
 
   const handleSave = () => {
     onSave({ weight, reps, rpe, feeling });
     setSaved(true);
+    setFlashing(true);
+    setTimeout(() => setFlashing(false), 800);
   };
 
   const adjustWeight = (delta: number) => {
@@ -69,112 +60,86 @@ export default function SetInput({
     return (
       <div
         onClick={() => setSaved(false)}
-        className="flex items-center justify-between bg-zinc-800/60 rounded-lg px-4 py-3 cursor-pointer hover:bg-zinc-800 border border-zinc-800/80 transition-colors group"
+        className={`flex items-center justify-between rounded-xl px-4 py-3.5 cursor-pointer border transition-all duration-300 group ${
+          flashing ? "bg-indigo-600/20 border-indigo-500/50 scale-[1.02]" : "bg-zinc-800/50 border-zinc-800/60 hover:bg-zinc-800"
+        }`}
       >
-        <span className="text-xs font-semibold text-zinc-500 w-8">#{setNumber}</span>
-        <div className="flex items-center gap-3 flex-1 ml-2">
+        <span className="text-xs font-semibold text-zinc-500 w-7">#{setNumber}</span>
+        <div className="flex items-center gap-2.5 flex-1 ml-2 min-w-0">
           <span className="text-base font-semibold text-white">{weight}kg</span>
-          <span className="text-xs text-zinc-500">x</span>
+          <span className="text-[10px] text-zinc-600">×</span>
           <span className="text-base font-semibold text-white">{reps}</span>
           {rpe && <span className="text-xs text-zinc-500">@ RPE {rpe}</span>}
-          {e1rm > 0 && (
-            <span className={`text-xs font-medium ml-auto ${showPR ? "text-amber-400 font-bold" : "text-indigo-400/70"}`}>
-              {e1rm} e1RM
-            </span>
-          )}
+          {e1rm > 0 && <span className={`text-[11px] ml-auto ${showPR ? "text-amber-400 font-bold" : "text-zinc-600"}`}>{e1rm} e1RM</span>}
         </div>
-        {feeling && <span className="text-lg ml-2">{feeling}</span>}
-        <span className="text-xs text-zinc-600 group-hover:text-zinc-400 transition-colors ml-2">edit</span>
+        {feeling && <span className="text-lg ml-1.5">{feeling}</span>}
+        <span className="text-[10px] text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity ml-2">edit</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-zinc-800 rounded-lg p-4 border border-zinc-700/50 space-y-3">
+    <div className="bg-zinc-800/80 rounded-xl p-4 border border-zinc-700/40 space-y-4">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-bold text-indigo-400">Set {setNumber}</span>
+        <span className="text-[11px] font-bold text-indigo-400">Set {setNumber}</span>
         {previous && previous.weight > 0 && (
-          <span className="text-[11px] text-zinc-500 ml-auto">
-            Last: {previous.weight}kg x {previous.reps}{previous.rpe ? ` @ ${previous.rpe}` : ""}
-          </span>
+          <span className="text-[10px] text-zinc-500 ml-auto">Last: {previous.weight}kg × {previous.reps}{previous.rpe ? ` @${previous.rpe}` : ""}</span>
         )}
+        {showPR && <span className="text-[10px] text-amber-400 font-bold animate-pulse">{prLabel}</span>}
       </div>
-      <div className="flex gap-2 items-end">
-        <div className="flex-1">
-          <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Weight (kg)</label>
-          <div className="flex items-center gap-1 mt-1">
-            <button
-              type="button"
-              onClick={() => adjustWeight(-2.5)}
-              className="w-7 h-8 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded-md text-xs font-bold shrink-0 transition-colors"
-            >
-              −
-            </button>
+
+      <div className="flex gap-2 items-start">
+        <div className="flex-[2]">
+          <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-1 block">Weight</label>
+          <div className="flex items-center gap-1.5">
+            <button type="button" onClick={() => adjustWeight(-2.5)} className="w-9 h-10 bg-zinc-700 hover:bg-zinc-600 active:bg-zinc-500 text-zinc-300 rounded-lg text-sm font-bold shrink-0 transition-colors flex items-center justify-center">−</button>
             <input
-              type="number"
-              inputMode="decimal"
-              step="0.5"
-              min="0"
+              type="number" inputMode="decimal" step="0.5" min="0"
               value={weight || ""}
               onChange={(e) => setWeight(parseFloat(e.target.value) || 0)}
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white text-center focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
-              placeholder="0"
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-2.5 text-base text-white text-center focus:outline-none focus:border-indigo-500 transition-colors font-medium"
+              placeholder="kg"
             />
-            <button
-              type="button"
-              onClick={() => adjustWeight(2.5)}
-              className="w-7 h-8 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded-md text-xs font-bold shrink-0 transition-colors"
-            >
-              +
-            </button>
+            <button type="button" onClick={() => adjustWeight(2.5)} className="w-9 h-10 bg-zinc-700 hover:bg-zinc-600 active:bg-zinc-500 text-zinc-300 rounded-lg text-sm font-bold shrink-0 transition-colors flex items-center justify-center">+</button>
           </div>
         </div>
         <div className="flex-1">
-          <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Reps</label>
+          <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-1 block">Reps</label>
           <input
-            type="number"
-            inputMode="numeric"
-            min="0"
+            type="number" inputMode="numeric" min="0"
             value={reps || ""}
             onChange={(e) => setReps(parseInt(e.target.value) || 0)}
-            className="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-base text-white text-center focus:outline-none focus:border-indigo-500 transition-colors font-medium"
             placeholder="0"
           />
         </div>
-        <div style={{ width: 90 }}>
-          <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">RPE</label>
+        <div style={{ width: 80 }}>
+          <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-1 block">RPE</label>
           <select
             value={rpe ?? ""}
             onChange={(e) => setRpe(e.target.value ? parseFloat(e.target.value) : null)}
-            className="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-1.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
           >
             <option value="">—</option>
-            {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((v) => (
-              <option key={v} value={v}>{v}</option>
-            ))}
+            {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((v) => (<option key={v} value={v}>{v}</option>))}
           </select>
         </div>
       </div>
 
       {weight > 0 && reps > 0 && (
-        <div className="text-center">
-          <span className={`text-xs font-medium ${showPR ? "text-amber-400 font-bold" : "text-indigo-400"}`}>
-            e1RM: {e1rm}kg {showPR && `🏆 ${prLabel}`}
-          </span>
+        <div className="flex items-center gap-2 text-[11px]">
+          <span className={showPR ? "text-amber-400 font-bold" : "text-indigo-400/60"}>e1RM: {e1rm}kg</span>
+          {showPR && <span className="text-amber-400">🏆</span>}
         </div>
       )}
 
-      <div className="flex items-center gap-1">
-        <span className="text-[10px] text-zinc-600 mr-1">How was it?</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[10px] text-zinc-600">Feeling</span>
         {FEELINGS.map((f) => (
           <button
-            key={f.emoji}
-            type="button"
-            onClick={() => setFeeling(f.emoji)}
-            className={`text-lg p-1 rounded-md transition-all ${
-              feeling === f.emoji
-                ? "bg-zinc-700 scale-125"
-                : "opacity-50 hover:opacity-100 hover:scale-110"
+            key={f.emoji} type="button" onClick={() => setFeeling(f.emoji)}
+            className={`text-xl p-1.5 rounded-lg transition-all active:scale-90 ${
+              feeling === f.emoji ? "bg-zinc-700 ring-1 ring-zinc-600 scale-110" : "opacity-40 hover:opacity-80"
             }`}
             title={f.label}
           >
@@ -183,13 +148,41 @@ export default function SetInput({
         ))}
       </div>
 
-      <button
-        onClick={handleSave}
-        disabled={weight <= 0 || reps <= 0}
-        className="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-      >
-        Log Set
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          disabled={weight <= 0 || reps <= 0}
+          className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-500 active:bg-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+        >
+          Log Set
+        </button>
+        {(previous?.weight || 0) > 0 && (
+          <button
+            onClick={() => {
+              setWeight(previous!.weight);
+              setReps(previous!.reps);
+              setRpe(previous!.rpe);
+            }}
+            className="px-3 py-3 bg-zinc-700 text-zinc-300 rounded-xl text-[11px] font-medium hover:bg-zinc-600 active:bg-zinc-500 transition-all active:scale-95"
+          >
+            Fill last
+          </button>
+        )}
+        {onLogAndRest && (
+          <button
+            onClick={() => {
+              if (weight > 0 && reps > 0) {
+                handleSave();
+                onLogAndRest();
+              }
+            }}
+            disabled={weight <= 0 || reps <= 0}
+            className="px-3 py-3 bg-zinc-700 text-indigo-300 rounded-xl text-[10px] font-semibold hover:bg-zinc-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-95"
+          >
+            Set + Rest
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -32,9 +32,13 @@ export default async function HistoryPage() {
     <div className="space-y-6 pt-4">
       <h1 className="text-2xl font-bold text-white">History</h1>
       {sessions.length === 0 ? (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
-          <p className="text-zinc-500 text-sm">No workouts completed yet.</p>
-          <Link href="/" className="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium">Start a workout</Link>
+        <div className="bg-zinc-900 border border-dashed border-zinc-800 rounded-2xl p-10 text-center space-y-4">
+          <div className="text-4xl">📅</div>
+          <div>
+            <h2 className="text-base font-semibold text-white">No sessions yet</h2>
+            <p className="text-sm text-zinc-500 mt-1">Completed workouts will show up here.</p>
+          </div>
+          <Link href="/" className="inline-block px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-500 active:bg-indigo-400 transition-all active:scale-[0.98]">Start a workout</Link>
         </div>
       ) : (
         Object.entries(groupedByMonth).map(([month, monthSessions]) => (

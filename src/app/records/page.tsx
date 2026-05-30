@@ -43,8 +43,13 @@ export default async function RecordsPage() {
     <div className="space-y-6 pt-4">
       <h1 className="text-2xl font-bold text-white">Personal Records</h1>
       {records.length === 0 ? (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
-          <p className="text-zinc-500 text-sm">No records yet.</p>
+        <div className="bg-zinc-900 border border-dashed border-zinc-800 rounded-2xl p-10 text-center space-y-4">
+          <div className="text-4xl">🏆</div>
+          <div>
+            <h2 className="text-base font-semibold text-white">No records yet</h2>
+            <p className="text-sm text-zinc-500 mt-1">Complete a workout to build your PR wall.</p>
+          </div>
+          <Link href="/" className="inline-block px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-500 active:bg-indigo-400 transition-all active:scale-[0.98]">Start a workout</Link>
         </div>
       ) : (
         <div className="space-y-2">

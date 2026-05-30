@@ -115,8 +115,12 @@ export default function WeightPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
-          <p className="text-zinc-500 text-sm">No weight entries yet.</p>
+        <div className="bg-zinc-900 border border-dashed border-zinc-800 rounded-2xl p-10 text-center space-y-4">
+          <div className="text-4xl">⚖️</div>
+          <div>
+            <h2 className="text-base font-semibold text-white">No weight entries yet</h2>
+            <p className="text-sm text-zinc-500 mt-1">Track your body weight to see trends and enable strength-to-weight ratios.</p>
+          </div>
         </div>
       )}
     </div>

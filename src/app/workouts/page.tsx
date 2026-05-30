@@ -3,6 +3,22 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+const COMMON_EXERCISES = [
+  "Bench Press", "Barbell Bench Press", "Dumbbell Bench Press", "Incline Bench Press",
+  "Overhead Press", "OHP", "Standing Barbell OHP", "Arnold Press",
+  "Squat", "Barbell Squat", "Goblet Squat", "Front Squat", "Bulgarian Split Squats",
+  "Deadlift", "Romanian Deadlift", "RDL", "Sumo Deadlift",
+  "Pull-ups", "Weighted Pull-ups", "Chin-ups", "Barbell Row", "Dumbbell Row", "Chest-Supported Row",
+  "Hip Thrust", "Barbell Hip Thrust", "KAS Glute Bridge",
+  "Leg Curl", "Seated Leg Curl", "Lying Leg Curl", "Leg Press",
+  "Skullcrushers", "Rope Tricep Pushdown", "Dips", "Close-grip Bench Press", "Tricep Pushdown",
+  "Barbell Curls", "Dumbbell Curls", "Hammer Curls", "Concentration Curls", "Preacher Curls",
+  "Wrist Curls", "Reverse Wrist Curls", "Farmer's Walks",
+  "Lateral Raises", "Dumbbell Lateral Raise", "Cable Lateral Raise",
+  "Plank", "Hanging Leg Raises", "Russian Twists", "Ab Wheel",
+  "Banded Glute Abduction", "Nordic Curls", "Back Extension", "Face Pull",
+];
+
 interface Exercise {
   exerciseName: string;
   sets: number;
@@ -25,6 +41,8 @@ export default function WorkoutsPage() {
   const [name, setName] = useState("");
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   useEffect(() => {
     fetchTemplates();
@@ -112,6 +130,12 @@ export default function WorkoutsPage() {
 
   function removeExercise(idx: number) {
     setExercises(exercises.filter((_, i) => i !== idx));
+  }
+
+  function filterSuggestions(query: string) {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return COMMON_EXERCISES.filter((e) => e.toLowerCase().includes(q)).slice(0, 6);
   }
 
   const showForm = editing !== null || isCreating;
@@ -212,7 +236,7 @@ export default function WorkoutsPage() {
                   key={idx}
                   className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 space-y-2"
                 >
-                  <div className="flex items-start gap-2">
+                  <div className="relative flex items-start gap-2">
                     <input
                       type="text"
                       value={ex.exerciseName}
@@ -220,10 +244,38 @@ export default function WorkoutsPage() {
                         const n = [...exercises];
                         n[idx] = { ...n[idx], exerciseName: e.target.value };
                         setExercises(n);
+                        setActiveDropdown(idx);
+                        setSuggestions(filterSuggestions(e.target.value));
                       }}
-                      placeholder="Exercise name"
+                      onFocus={() => {
+                        setActiveDropdown(idx);
+                        if (ex.exerciseName) setSuggestions(filterSuggestions(ex.exerciseName));
+                      }}
+                      onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
+                      placeholder="Exercise name (e.g. Bench Press)"
                       className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
                     />
+                    {activeDropdown === idx && suggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-10 mt-1 z-20 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden">
+                        {suggestions.map((s, si) => (
+                          <button
+                            key={si}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              const n = [...exercises];
+                              n[idx] = { ...n[idx], exerciseName: s };
+                              setExercises(n);
+                              setActiveDropdown(null);
+                              setSuggestions([]);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors border-b border-zinc-700/50 last:border-0"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <button
                       onClick={() => removeExercise(idx)}
                       className="text-red-400 text-xs px-2 py-2 hover:text-red-300"
