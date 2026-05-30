@@ -10,6 +10,7 @@ datasource db {
 model User {
   id        String            @id @default(cuid())
   name      String
+  title     String?
   sessions  WorkoutSession[]
   weights   BodyWeight[]
   profile   UserProfile?

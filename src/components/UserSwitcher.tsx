@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 interface User {
   id: string;
   name: string;
+  title: string | null;
 }
 
 export default function UserSwitcher() {
@@ -46,7 +47,7 @@ export default function UserSwitcher() {
         <span className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
           {currentUser?.name?.[0] || "?"}
         </span>
-        <span className="max-w-[80px] truncate">{currentUser?.name || "Select"}</span>
+        <span className="max-w-[100px] truncate">{currentUser?.title || currentUser?.name || "Select"}</span>
         <span className="text-zinc-600">▾</span>
       </button>
 
@@ -65,7 +66,7 @@ export default function UserSwitcher() {
                 <span className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                   {u.name[0]}
                 </span>
-                {u.name}
+                {u.title || u.name}
               </button>
             ))}
           </div>
