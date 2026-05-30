@@ -13,6 +13,8 @@ model User {
   title     String?
   sessions  WorkoutSession[]
   weights   BodyWeight[]
+  measurements BodyMeasurement[]
+  schedule  ScheduledWorkout[]
   profile   UserProfile?
   achievements Achievement[]
   createdAt DateTime          @default(now())
@@ -23,6 +25,7 @@ model WorkoutTemplate {
   name      String              @unique
   exercises TemplateExercise[]
   sessions  WorkoutSession[]
+  scheduled ScheduledWorkout[]
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
 }
@@ -36,6 +39,7 @@ model TemplateExercise {
   sortOrder    Int             @default(0)
   notes        String?
   settings     String?
+  supersetGroup Int?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 }
@@ -114,4 +118,30 @@ model Achievement {
   createdAt  DateTime  @default(now())
 
   @@unique([userId, key])
+}
+
+model BodyMeasurement {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @default(now())
+  weight    Float?
+  chest     Float?
+  waist     Float?
+  hips      Float?
+  arms      Float?
+  thighs    Float?
+  calves    Float?
+  createdAt DateTime @default(now())
+}
+
+model ScheduledWorkout {
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId String
+  template   WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  dayOfWeek  Int
+  time       String?
+  createdAt  DateTime        @default(now())
 }

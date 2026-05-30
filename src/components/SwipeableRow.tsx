@@ -13,13 +13,13 @@ export default function SwipeableRow({ onDelete, children }: Props) {
   const startX = useRef(0);
   const currentX = useRef(0);
 
-  function onTouchStart(e: React.TouchEvent) {
-    startX.current = e.touches[0].clientX;
+  function onStart(clientX: number) {
+    startX.current = clientX;
     currentX.current = 0;
   }
 
-  function onTouchMove(e: React.TouchEvent) {
-    const diff = e.touches[0].clientX - startX.current;
+  function onMove(clientX: number) {
+    const diff = clientX - startX.current;
     currentX.current = diff;
     if (diff < 0) {
       setTranslateX(Math.max(diff, -80));
@@ -27,7 +27,7 @@ export default function SwipeableRow({ onDelete, children }: Props) {
     }
   }
 
-  function onTouchEnd() {
+  function onEnd() {
     if (currentX.current < -40) {
       setTranslateX(-80);
       setShowDelete(true);
@@ -48,9 +48,13 @@ export default function SwipeableRow({ onDelete, children }: Props) {
         </button>
       )}
       <div
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        onTouchStart={(e) => onStart(e.touches[0].clientX)}
+        onTouchMove={(e) => onMove(e.touches[0].clientX)}
+        onTouchEnd={onEnd}
+        onMouseDown={(e) => onStart(e.clientX)}
+        onMouseMove={(e) => { if (e.buttons === 1) onMove(e.clientX); }}
+        onMouseUp={onEnd}
+        onMouseLeave={onEnd}
         style={{ transform: `translateX(${translateX}px)`, transition: "transform 0.2s ease-out" }}
       >
         {children}

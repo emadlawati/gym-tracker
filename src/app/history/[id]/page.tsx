@@ -39,11 +39,20 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
       <div>
         <Link href="/history" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">← History</Link>
         <h1 className="text-xl font-bold text-white mt-1">{session.template?.name || "Workout"}</h1>
-        <p className="text-sm text-zinc-500 mt-0.5">
-          {formatDate(session.date)}
-          {session.completed ? " · Completed" : " · In Progress"}
-          {session.duration ? ` · ${formatDuration(session.duration)}` : ""}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-zinc-500 mt-0.5">
+            {formatDate(session.date)}
+            {session.completed ? " · Completed" : " · In Progress"}
+            {session.duration ? ` · ${formatDuration(session.duration)}` : ""}
+          </p>
+          <a
+            href={`/api/share/${session.id}`}
+            target="_blank"
+            className="text-[10px] text-indigo-400 hover:text-indigo-300 px-2 py-1 bg-indigo-600/10 rounded-lg"
+          >
+            Share
+          </a>
+        </div>
         {session.notes && <p className="text-sm text-zinc-400 mt-2 bg-zinc-900 rounded-lg px-3 py-2 border border-zinc-800">{session.notes}</p>}
       </div>
 

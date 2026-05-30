@@ -63,6 +63,7 @@ export default function SessionPage() {
     xp: number; level: number; levelName: string;
     newAchievements: { icon: string; title: string }[];
   } | null>(null);
+  const [showProgression, setShowProgression] = useState(false);
 
   useEffect(() => { const tick = setInterval(() => setElapsed((p) => p + 1), 1000); return () => clearInterval(tick); }, []);
 
@@ -156,7 +157,11 @@ export default function SessionPage() {
     if (xpData.xp) {
       setXpGain({ xp: xpData.xp, level: xpData.level, levelName: xpData.levelName, newAchievements: xpData.newAchievements || [] });
       setShowConfetti(true);
-      setTimeout(() => { router.push("/"); router.refresh(); }, 4000);
+      setShowProgression(true);
+      setTimeout(() => {
+        router.push("/");
+        router.refresh();
+      }, 6000);
     } else { router.push("/"); router.refresh(); }
   }
 
@@ -218,9 +223,21 @@ export default function SessionPage() {
       <ProgressRing completed={completedSets} total={totalSets} />
 
       {xpGain && (
-        <div className="bg-zinc-900 border border-indigo-500/50 rounded-xl p-4 text-center animate-pulse">
-          <p className="text-2xl font-bold text-indigo-400">+{xpGain.xp} XP!</p>
-          <p className="text-xs text-zinc-400 mt-1">{xpGain.levelName} · Lv. {xpGain.level}</p>
+        <div className="space-y-3">
+          <div className="bg-zinc-900 border border-indigo-500/50 rounded-xl p-4 text-center animate-pulse">
+            <p className="text-2xl font-bold text-indigo-400">+{xpGain.xp} XP!</p>
+            <p className="text-xs text-zinc-400 mt-1">{xpGain.levelName} · Lv. {xpGain.level}</p>
+          </div>
+
+          {showProgression && (
+            <div className="bg-zinc-900 border border-emerald-500/30 rounded-xl p-4 text-center">
+              <p className="text-sm font-semibold text-white">Progressive overload</p>
+              <p className="text-xs text-zinc-400 mt-1">Add 2.5kg to all main lifts next session?</p>
+              <p className="text-[10px] text-zinc-600 mt-2">
+                Tip: When you consistently hit the top of your rep range, add 2.5kg and reset to the bottom of the range.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

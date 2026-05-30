@@ -1,21 +1,61 @@
 @import "tailwindcss";
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --bg: #09090b;
+  --fg: #fafafa;
+}
+
+.light {
+  --bg: #fafafa;
+  --fg: #09090b;
 }
 
 body {
-  background: #09090b;
-  color: #fafafa;
+  background: var(--bg);
+  color: var(--fg);
   font-family: var(--font-geist-sans, system-ui, sans-serif);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
   touch-action: manipulation;
 }
+
+.light .bg-zinc-950 { background: #fafafa; }
+.light .bg-zinc-900 { background: #f4f4f5; }
+.light .bg-zinc-800 { background: #e4e4e7; }
+.light .bg-zinc-700 { background: #d4d4d8; }
+.light .bg-zinc-800\/60 { background: rgba(228, 228, 231, 0.6); }
+.light .bg-zinc-800\/80 { background: rgba(228, 228, 231, 0.8); }
+.light .bg-zinc-950\/50 { background: rgba(250, 250, 250, 0.5); }
+.light .bg-zinc-900\/95 { background: rgba(244, 244, 245, 0.95); }
+
+.light .text-white { color: #09090b; }
+.light .text-zinc-100 { color: #18181b; }
+.light .text-zinc-300 { color: #3f3f46; }
+.light .text-zinc-400 { color: #52525b; }
+.light .text-zinc-500 { color: #71717a; }
+.light .text-zinc-600 { color: #a1a1aa; }
+.light .text-indigo-400 { color: #4f46e5; }
+.light .text-emerald-400 { color: #059669; }
+.light .text-amber-400 { color: #d97706; }
+.light .text-indigo-400\/60 { color: rgba(79, 70, 229, 0.6); }
+.light .text-indigo-400\/70 { color: rgba(79, 70, 229, 0.7); }
+
+.light .border-zinc-800 { border-color: #d4d4d8; }
+.light .border-zinc-700 { border-color: #a1a1aa; }
+.light .border-zinc-700\/40 { border-color: rgba(161, 161, 170, 0.4); }
+.light .border-zinc-700\/50 { border-color: rgba(161, 161, 170, 0.5); }
+.light .border-zinc-800\/80 { border-color: rgba(212, 212, 216, 0.8); }
+.light .border-zinc-800\/60 { border-color: rgba(212, 212, 216, 0.6); }
+
+.light .from-zinc-950 { --tw-gradient-from: #fafafa; }
+.light .to-zinc-950 { --tw-gradient-to: #fafafa; }
+
+.light input, .light select { 
+  color: #09090b;
+  background: #f4f4f5;
+}
+.light input::placeholder, .light select::placeholder { color: #a1a1aa; }
 
 button, a, input, select {
   -webkit-tap-highlight-color: transparent;
@@ -27,20 +67,14 @@ html {
 }
 
 @media (max-width: 380px) {
-  html {
-    font-size: 14px;
-  }
+  html { font-size: 14px; }
 }
 
 @media (min-width: 381px) and (max-width: 420px) {
-  html {
-    font-size: 15px;
-  }
+  html { font-size: 15px; }
 }
 
-::selection {
-  background: rgba(99, 102, 241, 0.3);
-}
+::selection { background: rgba(99, 102, 241, 0.3); }
 
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
@@ -48,9 +82,7 @@ input[type="number"]::-webkit-outer-spin-button {
   margin: 0;
 }
 
-input[type="number"] {
-  -moz-appearance: textfield;
-}
+input[type="number"] { -moz-appearance: textfield; }
 
 @keyframes fall {
   0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
@@ -62,10 +94,5 @@ input[type="number"] {
   100% { transform: translate(-50%, 0); opacity: 1; }
 }
 
-.animate-fall {
-  animation: fall linear forwards;
-}
-
-.animate-slideUp {
-  animation: slideUp 0.5s ease-out forwards;
-}
+.animate-fall { animation: fall linear forwards; }
+.animate-slideUp { animation: slideUp 0.5s ease-out forwards; }

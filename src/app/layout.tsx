@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import UserSwitcher from "@/components/UserSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 import { getUserId } from "@/lib/cookies";
 import { prisma } from "@/lib/prisma";
 
@@ -74,10 +75,13 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100 overscroll-none">
         <div className="max-w-lg mx-auto w-full px-4 pt-3 pb-1 flex items-center justify-between">
-          <span className="text-[10px] text-zinc-600 truncate">
+          <span className="text-[10px] text-zinc-600 dark:text-zinc-600 text-zinc-400 dark:text-zinc-500 truncate">
             {user ? `${user.name} — ${user.title}` : ""}
           </span>
-          <UserSwitcher />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <UserSwitcher />
+          </div>
         </div>
         <div className="flex-1 max-w-lg mx-auto w-full px-4 pb-24 pt-1">
           {children}
