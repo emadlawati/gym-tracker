@@ -32,3 +32,23 @@ export async function PUT(
     return NextResponse.json({ error: "Failed to update set" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
+    const { id } = await params;
+
+    const existing = await prisma.exerciseSet.findFirst({
+      where: { id, session: { userId } },
+    });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    await prisma.exerciseSet.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Failed to delete set" }, { status: 500 });
+  }
+}

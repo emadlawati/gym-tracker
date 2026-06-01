@@ -55,25 +55,14 @@ export function calculatePlates(targetWeight: number): { perSide: number[]; tota
   return { perSide, total: actualWeight };
 }
 
-export function getWarmupSets(workingWeight: number): { percentage: number; weight: number; reps: number }[] {
-  if (workingWeight <= 0) return [];
+export function getWarmupSets(previousWeight: number): { percentage: number; weight: number; reps: number }[] {
+  if (previousWeight <= 0) return [];
   const sets: { percentage: number; weight: number; reps: number }[] = [];
-  const percentages = [
-    { pct: 50, reps: 8 },
-    { pct: 60, reps: 5 },
-    { pct: 70, reps: 4 },
-    { pct: 80, reps: 2 },
-    { pct: 90, reps: 1 },
-  ];
 
-  let lastWeight = 0;
-  for (const { pct, reps } of percentages) {
-    let w = Math.round((workingWeight * pct) / 100 / 2.5) * 2.5;
+  for (const { pct, reps } of [{ pct: 50, reps: 8 }, { pct: 80, reps: 3 }]) {
+    let w = Math.round((previousWeight * pct) / 100 / 2.5) * 2.5;
     if (w <= BARBELL) w = BARBELL;
-    if (w > lastWeight && w <= workingWeight) {
-      sets.push({ percentage: pct, weight: w, reps });
-      lastWeight = w;
-    }
+    if (w < previousWeight) sets.push({ percentage: pct, weight: w, reps });
   }
 
   return sets;
@@ -106,6 +95,12 @@ export function calculateStreak(dates: Date[]): number {
   }
 
   return streak;
+}
+
+export function normalizeExerciseName(name: string): string {
+  return name.trim().replace(/\s+/g, " ").split(" ").map((w) =>
+    w.length <= 3 && w === w.toUpperCase() ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  ).join(" ");
 }
 
 export function formatDuration(seconds: number): string {

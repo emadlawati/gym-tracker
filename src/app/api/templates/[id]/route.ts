@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeExerciseName } from "@/lib/utils";
 
 export async function GET(
   _req: NextRequest,
@@ -37,12 +38,15 @@ export async function PUT(
       data: {
         name: name.trim(),
         exercises: {
-          create: exercises.map((ex: { exerciseName: string; sets: number; sortOrder: number; notes?: string; settings?: string }) => ({
-            exerciseName: ex.exerciseName,
+          create: exercises.map((ex: { exerciseName: string; sets: number; sortOrder: number; notes?: string; settings?: string; defaultWeight?: number; defaultReps?: number; defaultRpe?: number }) => ({
+            exerciseName: normalizeExerciseName(ex.exerciseName),
             sets: ex.sets,
             sortOrder: ex.sortOrder,
             notes: ex.notes || null,
             settings: ex.settings || null,
+            defaultWeight: ex.defaultWeight || null,
+            defaultReps: ex.defaultReps || null,
+            defaultRpe: ex.defaultRpe || null,
           })),
         },
       },

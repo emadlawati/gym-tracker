@@ -218,7 +218,7 @@ export default async function DashboardPage() {
             {recentSessions.map((s) => (
               <Link key={s.id} href={`/history/${s.id}`} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg px-4 py-3 transition-colors">
                 <div>
-                  <span className="text-sm font-medium text-white">{s.template?.name || "Workout"}</span>
+                  <span className="text-sm font-medium text-white">{s.templateName || s.template?.name || "Workout"}</span>
                   <span className="text-xs text-zinc-500 ml-2">{formatRelativeDate(s.date)}</span>
                   {s.xpEarned && <span className="text-[10px] text-indigo-400 ml-1">+{s.xpEarned}XP</span>}
                 </div>

@@ -64,6 +64,11 @@ button, a, input, select {
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+html * {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 @media (max-width: 380px) {

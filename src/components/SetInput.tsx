@@ -43,12 +43,20 @@ export default function SetInput({
   const showPR = isWeightPR || isRepPR;
   const prLabel = isWeightPR ? "Weight PR!" : "Rep PR!";
 
+  const [prCelebration, setPrCelebration] = useState(false);
+
   const handleSave = () => {
     onSave({ weight, reps, rpe, feeling, setType });
     setSaved(true);
     setFlashing(true);
     setTimeout(() => setFlashing(false), 800);
-    if (navigator.vibrate) navigator.vibrate(10);
+    if (showPR) {
+      setPrCelebration(true);
+      if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+      setTimeout(() => setPrCelebration(false), 2000);
+    } else {
+      if (navigator.vibrate) navigator.vibrate(10);
+    }
   };
 
   const adjustWeight = (delta: number) => {
@@ -61,6 +69,12 @@ export default function SetInput({
 
   if (saved) {
     return (
+      <>
+      {prCelebration && (
+        <div role="status" aria-live="polite" className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-amber-500 text-black text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg animate-slideUp">
+          {prLabel}
+        </div>
+      )}
       <div
         onClick={() => setSaved(false)}
         className={`flex items-center justify-between rounded-xl px-4 py-3.5 cursor-pointer border transition-all duration-300 group ${
@@ -78,6 +92,7 @@ export default function SetInput({
         {feeling && <span className="text-lg ml-1.5">{feeling}</span>}
         <span className="text-[10px] text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity ml-2">edit</span>
       </div>
+      </>
     );
   }
 
@@ -140,7 +155,7 @@ export default function SetInput({
         <span className="text-[10px] text-zinc-600">Feeling</span>
         {FEELINGS.map((f) => (
           <button key={f.emoji} type="button" onClick={() => setFeeling(f.emoji)}
-            className={`text-xl p-1.5 rounded-lg transition-all active:scale-90 ${feeling === f.emoji ? "bg-zinc-700 ring-1 ring-zinc-600 scale-110" : "opacity-40 hover:opacity-80"}`}
+            className={`text-xl p-2.5 rounded-lg transition-all active:scale-90 ${feeling === f.emoji ? "bg-zinc-700 ring-1 ring-zinc-600 scale-110" : "opacity-40 hover:opacity-80"}`}
             title={f.label}>{f.emoji}</button>
         ))}
       </div>

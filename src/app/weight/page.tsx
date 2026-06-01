@@ -13,6 +13,7 @@ interface WeightEntry {
 export default function WeightPage() {
   const [entries, setEntries] = useState<WeightEntry[]>([]);
   const [weight, setWeight] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export default function WeightPage() {
     await fetch("/api/weight", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weight: w }),
+      body: JSON.stringify({ weight: w, date }),
     });
 
     setWeight("");
@@ -75,6 +76,12 @@ export default function WeightPage() {
             Log
           </button>
         </div>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+        />
 
         {latest && (
           <div className="text-center py-2">
@@ -93,7 +100,13 @@ export default function WeightPage() {
       )}
 
       {loading ? (
-        <p className="text-zinc-500 text-sm">Loading...</p>
+        <div className="space-y-2 animate-pulse">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-4">
+              <div className="h-4 bg-zinc-800 rounded w-24" />
+            </div>
+          ))}
+        </div>
       ) : entries.length > 0 ? (
         <div className="space-y-1">
           {entries.map((e) => (

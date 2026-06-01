@@ -64,10 +64,22 @@ export default function MeasurementsPage() {
         <button onClick={handleAdd} className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-500 active:scale-[0.98] transition-all">Log</button>
       </div>
 
-      {loading ? <p className="text-zinc-500 text-sm">Loading...</p> : entries.length === 0 ? (
+      {loading ? (
+        <div className="space-y-2 animate-pulse">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div className="h-3 bg-zinc-800 rounded w-20 mb-3" />
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 2, 3, 4].map((j) => <div key={j} className="h-8 bg-zinc-800/50 rounded" />)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : entries.length === 0 ? (
         <div className="bg-zinc-900 border border-dashed border-zinc-800 rounded-2xl p-10 text-center space-y-4">
           <div className="text-4xl">📏</div>
           <h2 className="text-base font-semibold text-white">No measurements yet</h2>
+          <p className="text-sm text-zinc-500">Fill in the form above to log your first measurement.</p>
         </div>
       ) : (
         <div className="space-y-2">

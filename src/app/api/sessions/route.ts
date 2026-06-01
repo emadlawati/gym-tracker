@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     const session = await prisma.workoutSession.create({
       data: {
         templateId,
+        templateName: template.name,
         userId,
         notes: notes || null,
         exerciseSets: {

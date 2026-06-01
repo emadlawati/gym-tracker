@@ -4,16 +4,16 @@ import { useState, useMemo } from "react";
 import { getWarmupSets } from "@/lib/utils";
 
 interface Props {
-  workingWeight: number;
+  previousWeight: number;
 }
 
-export default function WarmupCalculator({ workingWeight }: Props) {
+export default function WarmupCalculator({ previousWeight }: Props) {
   const [open, setOpen] = useState(false);
 
   const warmupSets = useMemo(() => {
-    if (workingWeight <= 0) return [];
-    return getWarmupSets(workingWeight);
-  }, [workingWeight]);
+    if (previousWeight <= 30) return [];
+    return getWarmupSets(previousWeight);
+  }, [previousWeight]);
 
   if (warmupSets.length === 0) return null;
 
@@ -28,7 +28,7 @@ export default function WarmupCalculator({ workingWeight }: Props) {
       {open && (
         <div className="mt-2 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
           <div className="px-3 py-2 border-b border-zinc-800">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Warm-up</span>
+            <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Warm-up (based on last session: {previousWeight}kg)</span>
           </div>
           {warmupSets.map((ws, i) => (
             <div

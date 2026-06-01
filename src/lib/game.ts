@@ -82,7 +82,7 @@ const LIFT_RATIOS: Record<LiftName, { bronze: number; silver: number; gold: numb
   deadlift:{ bronze: 1.00, silver: 1.50, gold: 2.00, diamond: 2.50, ruby: 3.00 },
   ohp:     { bronze: 0.35, silver: 0.55, gold: 0.80, diamond: 1.10, ruby: 1.40 },
   row:     { bronze: 0.50, silver: 0.75, gold: 1.00, diamond: 1.50, ruby: 1.75 },
-  pullup:  { bronze: -0.1, silver: 0.15, gold: 0.45, diamond: 0.75, ruby: 1.10 },
+  pullup:  { bronze: 0.05, silver: 0.15, gold: 0.45, diamond: 0.75, ruby: 1.10 },
 };
 
 const LIFT_NAMES: Record<LiftName, string> = {
@@ -302,8 +302,9 @@ function checkSingleAchievement(key: string, p: EvalProfile): AchievementCheckRe
 
     if (lift === "pullup") {
       const current = best ? best.bestWeight + bw : 0;
-      if (current >= ratio * bw + bw || ratio < 0) return noResult(`${liftName}: Pull-up Mastery`);
-      return progressResult(prog, `${Math.round(ratio * bw)}kg added at ${Math.round(bw)}kg BW`);
+      if (current >= ratio * bw + bw) return noResult(`${liftName}: Pull-up Mastery`);
+      const pullupProg = Math.min(100, Math.round((current / (ratio * bw + bw)) * 100));
+      return progressResult(pullupProg, `${Math.round(ratio * bw)}kg added at ${Math.round(bw)}kg BW`);
     }
 
     return progressResult(

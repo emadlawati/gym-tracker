@@ -25,6 +25,9 @@ interface Exercise {
   sortOrder: number;
   notes?: string;
   settings?: string;
+  defaultWeight?: number;
+  defaultReps?: number;
+  defaultRpe?: number;
 }
 
 interface Template {
@@ -73,6 +76,9 @@ export default function WorkoutsPage() {
         sortOrder: e.sortOrder,
         notes: e.notes || "",
         settings: (e as Exercise & { settings?: string }).settings || "",
+        defaultWeight: (e as Exercise).defaultWeight || undefined,
+        defaultReps: (e as Exercise).defaultReps || undefined,
+        defaultRpe: (e as Exercise).defaultRpe || undefined,
       }))
     );
   }
@@ -95,6 +101,9 @@ export default function WorkoutsPage() {
         sortOrder: i,
         notes: ex.notes || undefined,
         settings: ex.settings || undefined,
+        defaultWeight: ex.defaultWeight || undefined,
+        defaultReps: ex.defaultReps || undefined,
+        defaultRpe: ex.defaultRpe || undefined,
       })),
     };
 
@@ -132,6 +141,14 @@ export default function WorkoutsPage() {
     setExercises(exercises.filter((_, i) => i !== idx));
   }
 
+  function moveExercise(idx: number, direction: "up" | "down") {
+    const target = direction === "up" ? idx - 1 : idx + 1;
+    if (target < 0 || target >= exercises.length) return;
+    const n = [...exercises];
+    [n[idx], n[target]] = [n[target], n[idx]];
+    setExercises(n);
+  }
+
   function filterSuggestions(query: string) {
     if (!query.trim()) return [];
     const q = query.toLowerCase();
@@ -158,7 +175,15 @@ export default function WorkoutsPage() {
       {!showForm && (
         <div className="space-y-2">
           {loading ? (
-            <p className="text-zinc-500 text-sm">Loading...</p>
+            <div className="space-y-2 animate-pulse">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+                  <div className="h-5 bg-zinc-800 rounded w-32" />
+                  <div className="h-3 bg-zinc-800/50 rounded w-48" />
+                  <div className="h-3 bg-zinc-800/50 rounded w-40" />
+                </div>
+              ))}
+            </div>
           ) : templates.length === 0 ? (
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
               <p className="text-zinc-500 text-sm">No workout templates yet.</p>
@@ -192,6 +217,13 @@ export default function WorkoutsPage() {
                     <div key={i} className="flex items-center text-sm">
                       <span className="text-zinc-500 w-6 text-xs">{i + 1}.</span>
                       <span className="text-zinc-300 flex-1">{ex.exerciseName}</span>
+                      {((ex as Exercise).defaultWeight || (ex as Exercise).defaultReps) && (
+                        <span className="text-zinc-600 text-[10px] mr-2">
+                          {(ex as Exercise).defaultWeight ? `${(ex as Exercise).defaultWeight}kg` : ""}
+                          {(ex as Exercise).defaultWeight && (ex as Exercise).defaultReps ? " × " : ""}
+                          {(ex as Exercise).defaultReps ? `${(ex as Exercise).defaultReps}` : ""}
+                        </span>
+                      )}
                       <span className="text-zinc-500 text-xs">{ex.sets} sets</span>
                     </div>
                   ))}
@@ -237,6 +269,12 @@ export default function WorkoutsPage() {
                   className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 space-y-2"
                 >
                   <div className="relative flex items-start gap-2">
+                    <div className="flex flex-col gap-0.5 pt-1.5">
+                      <button type="button" onClick={() => moveExercise(idx, "up")} disabled={idx === 0}
+                        className="text-[10px] text-zinc-500 hover:text-white disabled:opacity-20 transition-colors leading-none">▲</button>
+                      <button type="button" onClick={() => moveExercise(idx, "down")} disabled={idx === exercises.length - 1}
+                        className="text-[10px] text-zinc-500 hover:text-white disabled:opacity-20 transition-colors leading-none">▼</button>
+                    </div>
                     <input
                       type="text"
                       value={ex.exerciseName}
@@ -322,6 +360,52 @@ export default function WorkoutsPage() {
                     placeholder="Settings (e.g. seat pos 5, medium grip)"
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder:text-zinc-600"
                   />
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-zinc-600 shrink-0">Defaults</span>
+                    <div className="flex items-center gap-1">
+                      <label className="text-[10px] text-zinc-500">kg</label>
+                      <input
+                        type="number" inputMode="decimal" step="0.5" min="0"
+                        value={ex.defaultWeight || ""}
+                        onChange={(e) => {
+                          const n = [...exercises];
+                          n[idx] = { ...n[idx], defaultWeight: parseFloat(e.target.value) || undefined };
+                          setExercises(n);
+                        }}
+                        placeholder="—"
+                        className="w-16 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <label className="text-[10px] text-zinc-500">reps</label>
+                      <input
+                        type="number" inputMode="numeric" min="0"
+                        value={ex.defaultReps || ""}
+                        onChange={(e) => {
+                          const n = [...exercises];
+                          n[idx] = { ...n[idx], defaultReps: parseInt(e.target.value) || undefined };
+                          setExercises(n);
+                        }}
+                        placeholder="—"
+                        className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <label className="text-[10px] text-zinc-500">RPE</label>
+                      <select
+                        value={ex.defaultRpe || ""}
+                        onChange={(e) => {
+                          const n = [...exercises];
+                          n[idx] = { ...n[idx], defaultRpe: e.target.value ? parseFloat(e.target.value) : undefined };
+                          setExercises(n);
+                        }}
+                        className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-1 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="">—</option>
+                        {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((v) => (<option key={v} value={v}>{v}</option>))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

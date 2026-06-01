@@ -75,10 +75,24 @@ export default function AchievementsPage() {
         ))}
       </div>
 
+      {!loading && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex items-center justify-between">
+          <span className="text-sm text-white font-medium">{unlocked.length}/{achievements.length} unlocked</span>
+          <div className="h-1.5 flex-1 mx-3 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-indigo-600 to-amber-500 rounded-full transition-all" style={{ width: `${achievements.length > 0 ? (unlocked.length / achievements.length) * 100 : 0}%` }} />
+          </div>
+          <span className="text-xs text-zinc-500">{achievements.length > 0 ? Math.round((unlocked.length / achievements.length) * 100) : 0}%</span>
+        </div>
+      )}
+
       {loading ? (
-        <p className="text-zinc-500 text-sm">Loading...</p>
+        <div className="grid grid-cols-2 gap-2 animate-pulse">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 h-28" />
+          ))}
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
           {filtered.map((a) => {
             const { key, ...rest } = a;
             return <AchievementCard key={key} {...rest} />;

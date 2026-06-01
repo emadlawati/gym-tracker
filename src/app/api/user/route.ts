@@ -47,15 +47,13 @@ export async function POST(req: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       const session = await tx.workoutSession.findFirst({
-        where: { id: sessionId, userId },
+        where: { id: sessionId, userId, completed: true, xpAwarded: false },
         include: { exerciseSets: true },
       });
 
-      if (!session || !session.completed) {
-        throw new Error("Session not found or not completed");
-      }
-
-      if (session.xpAwarded) {
+      if (!session) {
+        const existing = await tx.workoutSession.findFirst({ where: { id: sessionId, userId } });
+        if (!existing || !existing.completed) throw new Error("Session not found or not completed");
         throw new Error("XP already awarded");
       }
 
@@ -95,7 +93,7 @@ export async function POST(req: NextRequest) {
         data: { xpEarned: xp, xpAwarded: true },
       });
 
-      return { xp, volume, totalPRs, newStreak, updatedProfile: profile };
+      return { xp, volume, totalPRs, newWeightPRs, newRepPRs, newStreak, updatedProfile: profile };
     });
 
     const updatedProfile = await prisma.userProfile.findUnique({ where: { userId } }) || await getOrCreateProfile(userId);
@@ -153,7 +151,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       xp: result.xp, volume: result.volume,
-      newRepPRs: result.totalPRs, newWeightPRs: result.totalPRs,
+      newRepPRs: result.newRepPRs, newWeightPRs: result.newWeightPRs,
       newStreak: result.newStreak,
       level: level.level, levelName: getLevelName(level.level),
       totalXP: updatedProfile.currentXP,

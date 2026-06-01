@@ -17,6 +17,9 @@ interface TemplateExercise {
   sortOrder: number;
   notes: string | null;
   settings?: string | null;
+  defaultWeight?: number | null;
+  defaultReps?: number | null;
+  defaultRpe?: number | null;
 }
 
 interface ExerciseSet {
@@ -64,8 +67,29 @@ export default function SessionPage() {
     newAchievements: { icon: string; title: string }[];
   } | null>(null);
   const [showProgression, setShowProgression] = useState(false);
+  const [sessionNotes, setSessionNotes] = useState("");
+  const [showNotes, setShowNotes] = useState(false);
+  const [pendingResume, setPendingResume] = useState<{ session: Session; date: string } | null>(null);
+  const [collapsedExercises, setCollapsedExercises] = useState<Set<string>>(new Set());
+  const [completing, setCompleting] = useState(false);
 
-  useEffect(() => { const tick = setInterval(() => setElapsed((p) => p + 1), 1000); return () => clearInterval(tick); }, []);
+  useEffect(() => {
+    if (session && !session.completed) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+      window.addEventListener("beforeunload", handleBeforeUnload);
+      return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }
+  }, [session?.completed]);
+
+  useEffect(() => {
+    if (session?.date) {
+      const startTime = new Date(session.date).getTime();
+      const updateElapsed = () => setElapsed(Math.floor((Date.now() - startTime) / 1000));
+      updateElapsed();
+      const tick = setInterval(updateElapsed, 1000);
+      return () => clearInterval(tick);
+    }
+  }, [session?.date]);
 
   async function fetchPrevious(exerciseName: string, sessionId: string) {
     const res = await fetch(`/api/previous?exerciseName=${encodeURIComponent(exerciseName)}&excludeSessionId=${sessionId}`);
@@ -82,6 +106,14 @@ export default function SessionPage() {
         const existing = existingSessions.find((s: Session) => s.templateId === templateId && !s.completed);
 
         if (existing) {
+          const completedSets = existing.exerciseSets?.filter((s: ExerciseSet) => s.completed).length || 0;
+          if (completedSets > 0) {
+            const res = await fetch(`/api/sessions/${existing.id}`);
+            const data = await res.json();
+            setPendingResume({ session: data, date: new Date(existing.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) });
+            setLoading(false);
+            return;
+          }
           const res = await fetch(`/api/sessions/${existing.id}`);
           const data = await res.json();
           setSession(data);
@@ -102,21 +134,81 @@ export default function SessionPage() {
         setLoading(false);
       } catch { setError("Failed to load workout"); setLoading(false); }
     })();
-    return () => {};
   }, [params.id]);
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   async function handleSaveAndSync(setId: string, data: { weight: number; reps: number; rpe: number | null; feeling: string | null; setType: string | null }) {
-    await fetch(`/api/sets/${setId}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
-    });
-    setSession((prev) => {
-      if (!prev) return prev;
-      return { ...prev, exerciseSets: prev.exerciseSets.map((s) => s.id === setId ? { ...s, ...data, completed: true } : s) };
-    });
+    try {
+      const res = await fetch(`/api/sets/${setId}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        setSaveError("Failed to save set. Check your connection.");
+        setTimeout(() => setSaveError(null), 4000);
+        return;
+      }
+      setSaveError(null);
+      setSession((prev) => {
+        if (!prev) return prev;
+        return { ...prev, exerciseSets: prev.exerciseSets.map((s) => s.id === setId ? { ...s, ...data, completed: true } : s) };
+      });
+    } catch {
+      setSaveError("Network error. Set was not saved.");
+      setTimeout(() => setSaveError(null), 4000);
+    }
   }
 
   function copyPreviousToSet(setId: string, ps: { weight: number; reps: number; rpe: number | null }) {
     handleSaveAndSync(setId, { weight: ps.weight, reps: ps.reps, rpe: ps.rpe, feeling: null, setType: "working" });
+  }
+
+  async function handleAddSet(exerciseName: string) {
+    if (!session) return;
+    const existingSets = session.exerciseSets.filter((s) => s.exerciseName === exerciseName);
+    const nextSetNumber = existingSets.length + 1;
+    const res = await fetch("/api/sets", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: session.id, exerciseName, setNumber: nextSetNumber }),
+    });
+    if (res.ok) {
+      const newSet = await res.json();
+      setSession((prev) => prev ? { ...prev, exerciseSets: [...prev.exerciseSets, newSet] } : prev);
+    }
+  }
+
+  async function handleResumeSession() {
+    if (!pendingResume) return;
+    setSession(pendingResume.session);
+    pendingResume.session.template.exercises.forEach((exercise: TemplateExercise) => {
+      fetchPrevious(exercise.exerciseName, pendingResume.session.id);
+    });
+    setPendingResume(null);
+  }
+
+  async function handleDiscardAndStartFresh() {
+    if (!pendingResume) return;
+    await fetch(`/api/sessions/${pendingResume.session.id}`, { method: "DELETE" });
+    setPendingResume(null);
+    setLoading(true);
+    const res = await fetch(`/api/templates/${params.id}`);
+    const template = await res.json();
+    if (template.error) { setError("Template not found"); setLoading(false); return; }
+    const createRes = await fetch("/api/sessions", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ templateId: params.id }),
+    });
+    const newSession = await createRes.json();
+    setSession(newSession);
+    newSession.template.exercises.forEach((exercise: TemplateExercise) => { fetchPrevious(exercise.exerciseName, newSession.id); });
+    setLoading(false);
+  }
+
+  async function handleDeleteSet(setId: string) {
+    const res = await fetch(`/api/sets/${setId}`, { method: "DELETE" });
+    if (res.ok) {
+      setSession((prev) => prev ? { ...prev, exerciseSets: prev.exerciseSets.filter((s) => s.id !== setId) } : prev);
+    }
   }
 
   function getVolumePR(exerciseName: string): { current: number; previous: number } | null {
@@ -144,9 +236,11 @@ export default function SessionPage() {
   }
 
   async function handleComplete() {
-    if (!session) return;
+    if (!session || completing) return;
+    setCompleting(true);
     await fetch(`/api/sessions/${session.id}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ completed: true, duration: elapsed }),
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: true, duration: elapsed, notes: sessionNotes || null }),
     });
 
     const xpRes = await fetch("/api/user", {
@@ -165,15 +259,37 @@ export default function SessionPage() {
     } else { router.push("/"); router.refresh(); }
   }
 
-  function getFirstWorkingWeight(exerciseName: string): number {
-    if (!session) return 0;
-    const sets = session.exerciseSets.filter((s) => s.exerciseName === exerciseName && s.completed);
-    if (sets.length === 0) {
-      const prev = previousData.get(exerciseName);
-      if (prev && prev.sets.length > 0) return prev.sets[0].weight;
-      return 0;
+  function getPreviousWeight(exerciseName: string): number {
+    const prev = previousData.get(exerciseName);
+    if (prev && prev.sets.length > 0) {
+      return Math.max(...prev.sets.map((s) => s.weight));
     }
-    return sets[0].weight;
+    return 0;
+  }
+
+  if (pendingResume) {
+    const completedCount = pendingResume.session.exerciseSets.filter((s) => s.completed).length;
+    const totalCount = pendingResume.session.exerciseSets.length;
+    return (
+      <div className="flex flex-col items-center justify-center pt-20 space-y-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4 max-w-sm w-full text-center">
+          <p className="text-base font-semibold text-white">Unfinished Session</p>
+          <p className="text-sm text-zinc-400">
+            You have a session from {pendingResume.date} with {completedCount}/{totalCount} sets completed.
+          </p>
+          <div className="flex flex-col gap-2">
+            <button onClick={handleResumeSession}
+              className="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-500 transition-all active:scale-[0.98]">
+              Resume Session
+            </button>
+            <button onClick={handleDiscardAndStartFresh}
+              className="w-full py-3 bg-zinc-800 text-zinc-300 rounded-xl text-sm font-medium hover:bg-zinc-700 transition-all active:scale-[0.98]">
+              Discard & Start Fresh
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
@@ -209,6 +325,12 @@ export default function SessionPage() {
     <div className="space-y-6 pb-8">
       <Confetti show={showConfetti} achievements={xpGain?.newAchievements} />
 
+      {saveError && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-600 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg animate-slideUp">
+          {saveError}
+        </div>
+      )}
+
       <header className="flex items-center justify-between pt-4">
         <div>
           <h1 className="text-xl font-bold text-white">{session.template?.name || "Workout"}</h1>
@@ -229,13 +351,26 @@ export default function SessionPage() {
             <p className="text-xs text-zinc-400 mt-1">{xpGain.levelName} · Lv. {xpGain.level}</p>
           </div>
 
-          {showProgression && (
-            <div className="bg-zinc-900 border border-emerald-500/30 rounded-xl p-4 text-center">
-              <p className="text-sm font-semibold text-white">Progressive overload</p>
-              <p className="text-xs text-zinc-400 mt-1">Add 2.5kg to all main lifts next session?</p>
-              <p className="text-[10px] text-zinc-600 mt-2">
-                Tip: When you consistently hit the top of your rep range, add 2.5kg and reset to the bottom of the range.
-              </p>
+          {showProgression && session && (
+            <div className="bg-zinc-900 border border-emerald-500/30 rounded-xl p-4 space-y-2">
+              <p className="text-sm font-semibold text-white text-center">Progressive Overload</p>
+              {exercises.map((exercise) => {
+                const sets = session.exerciseSets.filter((s) => s.exerciseName === exercise.exerciseName && s.completed);
+                if (sets.length === 0) return null;
+                const allHitTarget = sets.every((s) => s.reps >= 8);
+                const maxWeight = Math.max(...sets.map((s) => s.weight));
+                const isCompound = ["squat", "bench", "deadlift", "press", "row"].some((k) => exercise.exerciseName.toLowerCase().includes(k));
+                const increment = isCompound ? 2.5 : 1.25;
+                return allHitTarget ? (
+                  <p key={exercise.id} className="text-xs text-emerald-400">
+                    {exercise.exerciseName}: +{increment}kg (→ {maxWeight + increment}kg)
+                  </p>
+                ) : (
+                  <p key={exercise.id} className="text-[10px] text-zinc-500">
+                    {exercise.exerciseName}: keep at {maxWeight}kg, build reps
+                  </p>
+                );
+              })}
             </div>
           )}
         </div>
@@ -246,26 +381,38 @@ export default function SessionPage() {
         const prev = previousData.get(exercise.exerciseName);
         const completedCount = exerciseSets.filter((s) => s.completed).length;
         const volumePR = getVolumePR(exercise.exerciseName);
-        const workingWeight = getFirstWorkingWeight(exercise.exerciseName);
+        const prevWeight = getPreviousWeight(exercise.exerciseName);
         const prevBest = getPreviousBest(exercise.exerciseName);
         const isCollapsed = collapsedPrev.has(exercise.exerciseName);
 
+        const isExerciseCollapsed = collapsedExercises.has(exercise.exerciseName);
+        const exerciseComplete = completedCount === exerciseSets.length;
+
         return (
           <section key={exercise.id} className="space-y-3">
-            <div className="flex items-baseline gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                const n = new Set(collapsedExercises);
+                if (isExerciseCollapsed) n.delete(exercise.exerciseName); else n.add(exercise.exerciseName);
+                setCollapsedExercises(n);
+              }}
+              className="flex items-baseline gap-2 flex-wrap w-full text-left"
+            >
+              <span className={`text-[10px] transition-transform ${isExerciseCollapsed ? "" : "rotate-90"}`}>▸</span>
               <h2 className="text-base font-semibold text-white">{exercise.exerciseName}</h2>
-              <span className="text-xs text-zinc-600">{completedCount}/{exercise.sets}</span>
+              <span className="text-xs text-zinc-600">{completedCount}/{exerciseSets.length}</span>
+              {exerciseComplete && <span className="text-[10px] text-emerald-500">Done</span>}
               {volumePR && (
                 <span className="text-[10px] bg-amber-900/50 text-amber-400 px-1.5 py-0.5 rounded font-bold">PR!</span>
               )}
-            </div>
+            </button>
 
-            {exercise.notes && <p className="text-xs text-zinc-500 italic">{exercise.notes}</p>}
-            {exercise.settings && <p className="text-[10px] text-zinc-600">Settings: {exercise.settings}</p>}
+            {!isExerciseCollapsed && exercise.notes && <p className="text-xs text-zinc-500 italic">{exercise.notes}</p>}
+            {!isExerciseCollapsed && exercise.settings && <p className="text-[10px] text-zinc-600">Settings: {exercise.settings}</p>}
 
-            {workingWeight > 0 && <WarmupCalculator workingWeight={workingWeight} />}
+            {!isExerciseCollapsed && prevWeight > 0 && <WarmupCalculator previousWeight={prevWeight} />}
 
-            {prev && (
+            {!isExerciseCollapsed && prev && (
               <div>
                 <button
                   onClick={() => {
@@ -304,37 +451,62 @@ export default function SessionPage() {
               </div>
             )}
 
-            <div className="space-y-2">
+            {!isExerciseCollapsed && <div className="space-y-2">
               {exerciseSets.map((es) => {
                 const prevSet = prev?.sets.find((ps) => ps.setNumber === es.setNumber);
                 return (
-                  <SetInput
-                    key={es.id}
-                    setNumber={es.setNumber}
-                    initialWeight={es.weight !== 0 ? es.weight : (prevSet?.weight || undefined)}
-                    initialReps={es.reps !== 0 ? es.reps : (prevSet?.reps || undefined)}
-                    initialRpe={es.rpe}
-                    initialFeeling={es.feeling}
-                    initialSetType={es.setType}
-                    onSave={(data) => handleSaveAndSync(es.id, data)}
-                    previous={prevSet || null}
-                    previousBestWeight={prevBest.bestWeight || undefined}
-                    previousBestReps={prevBest.bestReps || undefined}
-                  />
+                  <div key={es.id} className="relative group/set">
+                    <SetInput
+                      setNumber={es.setNumber}
+                      initialWeight={es.weight !== 0 ? es.weight : (prevSet?.weight || exercise.defaultWeight || undefined)}
+                      initialReps={es.reps !== 0 ? es.reps : (prevSet?.reps || exercise.defaultReps || undefined)}
+                      initialRpe={es.rpe ?? (prevSet?.rpe ?? exercise.defaultRpe ?? null)}
+                      initialFeeling={es.feeling}
+                      initialSetType={es.setType}
+                      onSave={(data) => handleSaveAndSync(es.id, data)}
+                      previous={prevSet || null}
+                      previousBestWeight={prevBest.bestWeight || undefined}
+                      previousBestReps={prevBest.bestReps || undefined}
+                    />
+                    {!es.completed && exerciseSets.length > 1 && (
+                      <button onClick={() => handleDeleteSet(es.id)}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-zinc-700 hover:bg-red-600 text-zinc-400 hover:text-white rounded-full text-[10px] opacity-0 group-hover/set:opacity-100 transition-all flex items-center justify-center">✕</button>
+                    )}
+                  </div>
                 );
               })}
-            </div>
+              <button onClick={() => handleAddSet(exercise.exerciseName)}
+                className="w-full py-2 text-xs text-zinc-500 hover:text-indigo-400 border border-dashed border-zinc-800 hover:border-indigo-500/40 rounded-lg transition-colors">
+                + Add Set
+              </button>
+            </div>}
           </section>
         );
       })}
 
-      <div className="pt-4">
+      <div className="pt-2">
+        <button onClick={() => setShowNotes(!showNotes)}
+          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors mb-2">
+          {showNotes ? "▾ Hide notes" : "▸ Add session notes"}
+        </button>
+        {showNotes && (
+          <textarea
+            value={sessionNotes}
+            onChange={(e) => setSessionNotes(e.target.value)}
+            placeholder="How was the session? Any notes..."
+            rows={3}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 resize-none mb-3"
+          />
+        )}
+      </div>
+
+      <div className="pt-2">
         <button
           onClick={handleComplete}
-          disabled={!allSetsCompleted}
+          disabled={!allSetsCompleted || completing}
           className="w-full py-4 bg-emerald-600 text-white rounded-xl text-base font-bold hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
         >
-          {allSetsCompleted ? "Finish Workout" : `Complete all sets (${totalSets - completedSets} remaining)`}
+          {completing ? "Saving..." : allSetsCompleted ? "Finish Workout" : `Complete all sets (${totalSets - completedSets} remaining)`}
         </button>
       </div>
 

@@ -27,6 +27,7 @@ export default function ThemeToggle() {
       onClick={toggle}
       className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center text-sm transition-colors"
       title={dark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
     >
       {dark ? "🌙" : "☀️"}
     </button>
