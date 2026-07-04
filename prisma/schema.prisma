@@ -169,15 +169,23 @@ model CatalogExercise {
 }
 
 model ExerciseBaseline {
-  id           String   @id @default(cuid())
+  id           String                @id @default(cuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   exerciseName String
-  weight       Float?
-  reps         Int?
-  rpe          Float?
-  updatedAt    DateTime @updatedAt
-  createdAt    DateTime @default(now())
+  sets         ExerciseBaselineSet[]
+  updatedAt    DateTime              @updatedAt
+  createdAt    DateTime              @default(now())
 
   @@unique([userId, exerciseName])
+}
+
+model ExerciseBaselineSet {
+  id         String           @id @default(cuid())
+  baselineId String
+  baseline   ExerciseBaseline @relation(fields: [baselineId], references: [id], onDelete: Cascade)
+  setNumber  Int
+  weight     Float?
+  reps       Int?
+  rpe        Float?
 }

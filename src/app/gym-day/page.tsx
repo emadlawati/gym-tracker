@@ -45,10 +45,16 @@ interface PreviousData {
   sets: { setNumber: number; weight: number; reps: number; rpe: number | null }[];
 }
 
-interface Baseline {
+interface BaselineSet {
   weight: number | null;
   reps: number | null;
   rpe: number | null;
+}
+
+interface BmSetForm {
+  weight: string;
+  reps: string;
+  rpe: string;
 }
 
 export default function GymDayPage() {
@@ -58,11 +64,9 @@ export default function GymDayPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previousData, setPreviousData] = useState<Map<string, PreviousData>>(new Map());
-  const [baselines, setBaselines] = useState<Map<string, Baseline>>(new Map());
+  const [baselines, setBaselines] = useState<Map<string, BaselineSet[]>>(new Map());
   const [editingBenchmark, setEditingBenchmark] = useState<string | null>(null);
-  const [bmWeight, setBmWeight] = useState("");
-  const [bmReps, setBmReps] = useState("");
-  const [bmRpe, setBmRpe] = useState("");
+  const [bmSets, setBmSets] = useState<BmSetForm[]>([]);
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newExercise, setNewExercise] = useState("");
@@ -113,8 +117,11 @@ export default function GymDayPage() {
         const bmRes = await fetch("/api/baselines", { cache: "no-store" });
         const bms = await bmRes.json();
         if (Array.isArray(bms)) {
-          const map = new Map<string, Baseline>();
-          for (const b of bms) map.set(b.exerciseName, { weight: b.weight, reps: b.reps, rpe: b.rpe });
+          const map = new Map<string, BaselineSet[]>();
+          for (const b of bms) {
+            const sets = (b.sets || []).map((s: BaselineSet) => ({ weight: s.weight, reps: s.reps, rpe: s.rpe }));
+            if (sets.length > 0) map.set(b.exerciseName, sets);
+          }
           setBaselines(map);
         }
 
@@ -170,9 +177,26 @@ export default function GymDayPage() {
     return { bestWeight, bestReps };
   }
 
+  function benchmarkSets(name: string): BaselineSet[] {
+    return baselines.get(name) || [];
+  }
+
   function hasBenchmark(name: string): boolean {
-    const b = baselines.get(name);
-    return !!b && (b.weight != null || b.reps != null);
+    return benchmarkSets(name).some((s) => s.weight != null || s.reps != null);
+  }
+
+  // Short "80×5 · 75×6" summary of the benchmark sets.
+  function benchmarkSummary(name: string): string {
+    return benchmarkSets(name)
+      .map((s) => `${s.weight ?? "–"}×${s.reps ?? "–"}`)
+      .join(" · ");
+  }
+
+  // Best e1RM across the benchmark's sets.
+  function benchmarkBestE1RM(name: string): number {
+    const sets = benchmarkSets(name).filter((s) => s.weight != null && s.reps != null);
+    if (sets.length === 0) return 0;
+    return Math.max(...sets.map((s) => estimate1RM(s.weight as number, s.reps as number)));
   }
 
   // Best e1RM among this session's completed sets for an exercise.
@@ -183,26 +207,31 @@ export default function GymDayPage() {
   }
 
   function startEditBenchmark(name: string) {
-    const b = baselines.get(name);
-    setBmWeight(b?.weight != null ? String(b.weight) : "");
-    setBmReps(b?.reps != null ? String(b.reps) : "");
-    setBmRpe(b?.rpe != null ? String(b.rpe) : "");
+    const existing = benchmarkSets(name);
+    const rows: BmSetForm[] = existing.length > 0
+      ? existing.map((s) => ({ weight: s.weight != null ? String(s.weight) : "", reps: s.reps != null ? String(s.reps) : "", rpe: s.rpe != null ? String(s.rpe) : "" }))
+      : [{ weight: "", reps: "", rpe: "" }, { weight: "", reps: "", rpe: "" }]; // default to 2 sets
+    setBmSets(rows);
     setEditingBenchmark(name);
   }
 
+  function updateBmSet(idx: number, field: keyof BmSetForm, value: string) {
+    setBmSets((prev) => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
+  }
+
   async function saveBenchmark(name: string) {
-    const payload = {
-      exerciseName: name,
-      weight: bmWeight === "" ? null : parseFloat(bmWeight),
-      reps: bmReps === "" ? null : parseInt(bmReps),
-      rpe: bmRpe === "" ? null : parseFloat(bmRpe),
-    };
     const res = await fetch("/api/baselines", {
-      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exerciseName: name, sets: bmSets }),
     });
     if (res.ok) {
       const saved = await res.json();
-      setBaselines((prev) => new Map(prev).set(name, { weight: saved.weight, reps: saved.reps, rpe: saved.rpe }));
+      const sets: BaselineSet[] = (saved.sets || []).map((s: BaselineSet) => ({ weight: s.weight, reps: s.reps, rpe: s.rpe }));
+      setBaselines((prev) => {
+        const next = new Map(prev);
+        if (sets.length > 0) next.set(name, sets); else next.delete(name);
+        return next;
+      });
       setEditingBenchmark(null);
     }
   }
@@ -210,13 +239,18 @@ export default function GymDayPage() {
   async function addExerciseToSession(name: string) {
     if (!session) return;
     await fetchPrevious(name, session.id);
-    const res = await fetch("/api/sets", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: session.id, exerciseName: name, setNumber: 1 }),
-    });
-    if (res.ok) {
-      const newSet = await res.json();
-      setSession((prev) => prev ? { ...prev, exerciseSets: [...prev.exerciseSets, newSet] } : prev);
+    // Start with as many sets as the benchmark defines (defaulting to 2).
+    const count = Math.max(1, benchmarkSets(name).length || 2);
+    const created: ExerciseSet[] = [];
+    for (let i = 1; i <= count; i++) {
+      const res = await fetch("/api/sets", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: session.id, exerciseName: name, setNumber: i }),
+      });
+      if (res.ok) created.push(await res.json());
+    }
+    if (created.length > 0) {
+      setSession((prev) => prev ? { ...prev, exerciseSets: [...prev.exerciseSets, ...created] } : prev);
     }
   }
 
@@ -379,14 +413,15 @@ export default function GymDayPage() {
                 <div className="px-4 pb-4 space-y-2 border-t border-zinc-800/60 pt-3">
                   {cat.exercises.map((ex) => {
                     const active = isActive(ex.name);
-                    const bm = baselines.get(ex.name);
+                    const bmList = benchmarkSets(ex.name);
                     const editing = editingBenchmark === ex.name;
                     const sets = active ? activeSetsFor(ex.name) : [];
                     const prev = previousData.get(ex.name);
                     const best = prevBest(ex.name);
                     const pw = prevMaxWeight(ex.name);
+                    const bmFirstWeight = bmList[0]?.weight ?? 0;
                     const doneCount = sets.filter((s) => s.completed).length;
-                    const bmE1RM = bm && bm.weight != null && bm.reps != null ? estimate1RM(bm.weight, bm.reps) : 0;
+                    const bmE1RM = benchmarkBestE1RM(ex.name);
                     const curE1RM = active ? currentBestE1RM(ex.name) : 0;
                     const beatBenchmark = bmE1RM > 0 && curE1RM > bmE1RM;
 
@@ -408,26 +443,38 @@ export default function GymDayPage() {
                             onClick={() => editing ? setEditingBenchmark(null) : startEditBenchmark(ex.name)}
                             className={`text-[10px] px-2 py-1 rounded-lg font-medium transition-colors ${hasBenchmark(ex.name) ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20" : "text-zinc-500 hover:text-amber-400"}`}
                           >
-                            {hasBenchmark(ex.name) ? `🎯 ${bm?.weight ?? "–"}${bm?.reps != null ? `×${bm.reps}` : ""}` : "Set benchmark"}
+                            {hasBenchmark(ex.name) ? `🎯 ${benchmarkSummary(ex.name)}` : "Set benchmark"}
                           </button>
                         </div>
 
-                        {/* Inline benchmark editor */}
+                        {/* Inline benchmark editor — one row per set */}
                         {editing && (
-                          <div className="flex items-center gap-2 ml-9 flex-wrap">
-                            <div className="flex items-center gap-1"><span className="text-[10px] text-zinc-500">kg</span>
-                              <input type="number" inputMode="decimal" step="0.5" value={bmWeight} onChange={(e) => setBmWeight(e.target.value)} placeholder="–"
-                                className="w-16 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-amber-500" /></div>
-                            <div className="flex items-center gap-1"><span className="text-[10px] text-zinc-500">reps</span>
-                              <input type="number" inputMode="numeric" value={bmReps} onChange={(e) => setBmReps(e.target.value)} placeholder="–"
-                                className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-amber-500" /></div>
-                            <div className="flex items-center gap-1"><span className="text-[10px] text-zinc-500">RPE</span>
-                              <select value={bmRpe} onChange={(e) => setBmRpe(e.target.value)}
-                                className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-1 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
-                                <option value="">–</option>
-                                {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((v) => (<option key={v} value={v}>{v}</option>))}
-                              </select></div>
-                            <button onClick={() => saveBenchmark(ex.name)} className="px-2.5 py-1.5 bg-amber-500 text-black rounded-lg text-[11px] font-bold active:scale-95">Save</button>
+                          <div className="ml-9 space-y-1.5 mt-1">
+                            {bmSets.map((s, i) => (
+                              <div key={i} className="flex items-center gap-2">
+                                <span className="text-[10px] text-zinc-500 w-8">Set {i + 1}</span>
+                                <div className="flex items-center gap-1"><span className="text-[10px] text-zinc-500">kg</span>
+                                  <input type="number" inputMode="decimal" step="0.5" value={s.weight} onChange={(e) => updateBmSet(i, "weight", e.target.value)} placeholder="–"
+                                    className="w-16 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-amber-500" /></div>
+                                <div className="flex items-center gap-1"><span className="text-[10px] text-zinc-500">reps</span>
+                                  <input type="number" inputMode="numeric" value={s.reps} onChange={(e) => updateBmSet(i, "reps", e.target.value)} placeholder="–"
+                                    className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-amber-500" /></div>
+                                <div className="flex items-center gap-1"><span className="text-[10px] text-zinc-500">RPE</span>
+                                  <select value={s.rpe} onChange={(e) => updateBmSet(i, "rpe", e.target.value)}
+                                    className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-1 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                                    <option value="">–</option>
+                                    {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((v) => (<option key={v} value={v}>{v}</option>))}
+                                  </select></div>
+                                {bmSets.length > 1 && (
+                                  <button onClick={() => setBmSets((prev) => prev.filter((_, j) => j !== i))} className="text-[10px] text-zinc-600 hover:text-red-400">✕</button>
+                                )}
+                              </div>
+                            ))}
+                            <div className="flex items-center gap-2 pt-0.5">
+                              <button onClick={() => setBmSets((prev) => [...prev, { weight: "", reps: "", rpe: "" }])} className="text-[10px] text-zinc-500 hover:text-amber-400">+ Add set</button>
+                              <button onClick={() => saveBenchmark(ex.name)} className="px-2.5 py-1.5 bg-amber-500 text-black rounded-lg text-[11px] font-bold active:scale-95">Save benchmark</button>
+                              <button onClick={() => setEditingBenchmark(null)} className="text-[10px] text-zinc-500">Cancel</button>
+                            </div>
                           </div>
                         )}
 
@@ -444,7 +491,7 @@ export default function GymDayPage() {
                             </div>
 
                             {hasBenchmark(ex.name) && (
-                              <p className="text-[10px] text-amber-400/80">🎯 Benchmark: {bm?.weight ?? "–"}kg × {bm?.reps ?? "–"}{bm?.rpe ? ` @${bm.rpe}` : ""}{bmE1RM ? ` · e1RM ${bmE1RM}` : ""}</p>
+                              <p className="text-[10px] text-amber-400/80">🎯 Benchmark: {benchmarkSummary(ex.name)}{bmE1RM ? ` · best e1RM ${bmE1RM}` : ""}</p>
                             )}
                             {prev && (
                               <p className="text-[10px] text-zinc-500">Last ({new Date(prev.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}): {prev.sets.map((s) => `${s.weight}×${s.reps}`).join(" · ")}</p>
@@ -453,12 +500,12 @@ export default function GymDayPage() {
                               <p className="text-[10px] text-zinc-600">No benchmark or history yet — set a benchmark above to track progress.</p>
                             )}
 
-                            {(pw > 0 || (bm?.weight ?? 0) > 0) && <WarmupCalculator previousWeight={pw > 0 ? pw : (bm?.weight ?? 0)} />}
+                            {(pw > 0 || bmFirstWeight > 0) && <WarmupCalculator previousWeight={pw > 0 ? pw : bmFirstWeight} />}
 
                             <div className="space-y-2">
                               {sets.map((es) => {
                                 const prevSet = prev?.sets.find((ps) => ps.setNumber === es.setNumber);
-                                const seed = es.setNumber === 1 ? bm : undefined;
+                                const seed = bmList[es.setNumber - 1];
                                 return (
                                   <div key={es.id} className="relative group/set">
                                     <SetInput

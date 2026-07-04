@@ -45,22 +45,23 @@ export async function PUT(
     });
 
     // Roll benchmarks forward for a completed Gym Day: each exercise's benchmark
-    // becomes its best (highest e1RM) set from this session.
+    // becomes the sets performed this session (so you always chase your latest).
     if (data.completed && updated.templateName === "Gym Day") {
-      const bestByExercise = new Map<string, { weight: number; reps: number; rpe: number | null; e1rm: number }>();
+      const setsByExercise = new Map<string, { setNumber: number; weight: number; reps: number; rpe: number | null }[]>();
       for (const s of updated.exerciseSets) {
         if (!s.completed || s.weight <= 0 || s.reps <= 0) continue;
-        const e1rm = estimate1RM(s.weight, s.reps);
-        const cur = bestByExercise.get(s.exerciseName);
-        if (!cur || e1rm > cur.e1rm) {
-          bestByExercise.set(s.exerciseName, { weight: s.weight, reps: s.reps, rpe: s.rpe, e1rm });
-        }
+        const list = setsByExercise.get(s.exerciseName) || [];
+        list.push({ setNumber: s.setNumber, weight: s.weight, reps: s.reps, rpe: s.rpe });
+        setsByExercise.set(s.exerciseName, list);
       }
-      for (const [exerciseName, b] of bestByExercise) {
+      for (const [exerciseName, rawSets] of setsByExercise) {
+        const ordered = rawSets
+          .sort((a, b) => a.setNumber - b.setNumber)
+          .map((s, i) => ({ setNumber: i + 1, weight: s.weight, reps: s.reps, rpe: s.rpe }));
         await prisma.exerciseBaseline.upsert({
           where: { userId_exerciseName: { userId, exerciseName } },
-          create: { userId, exerciseName, weight: b.weight, reps: b.reps, rpe: b.rpe },
-          update: { weight: b.weight, reps: b.reps, rpe: b.rpe },
+          create: { userId, exerciseName, sets: { create: ordered } },
+          update: { sets: { deleteMany: {}, create: ordered } },
         });
       }
     }
