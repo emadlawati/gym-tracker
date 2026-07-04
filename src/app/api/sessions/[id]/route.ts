@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { estimate1RM } from "@/lib/utils";
 
 export async function GET(
   req: NextRequest,
@@ -42,6 +43,28 @@ export async function PUT(
         exerciseSets: { orderBy: [{ exerciseName: "asc" }, { setNumber: "asc" }] },
       },
     });
+
+    // Roll benchmarks forward for a completed Gym Day: each exercise's benchmark
+    // becomes its best (highest e1RM) set from this session.
+    if (data.completed && updated.templateName === "Gym Day") {
+      const bestByExercise = new Map<string, { weight: number; reps: number; rpe: number | null; e1rm: number }>();
+      for (const s of updated.exerciseSets) {
+        if (!s.completed || s.weight <= 0 || s.reps <= 0) continue;
+        const e1rm = estimate1RM(s.weight, s.reps);
+        const cur = bestByExercise.get(s.exerciseName);
+        if (!cur || e1rm > cur.e1rm) {
+          bestByExercise.set(s.exerciseName, { weight: s.weight, reps: s.reps, rpe: s.rpe, e1rm });
+        }
+      }
+      for (const [exerciseName, b] of bestByExercise) {
+        await prisma.exerciseBaseline.upsert({
+          where: { userId_exerciseName: { userId, exerciseName } },
+          create: { userId, exerciseName, weight: b.weight, reps: b.reps, rpe: b.rpe },
+          update: { weight: b.weight, reps: b.reps, rpe: b.rpe },
+        });
+      }
+    }
+
     return NextResponse.json(updated);
   } catch {
     return NextResponse.json({ error: "Failed to update session" }, { status: 500 });

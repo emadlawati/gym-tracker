@@ -1,6 +1,14 @@
 interface MuscleInfo { primary: string; secondary?: string[] }
 
 const MUSCLE_MAP: Record<string, MuscleInfo> = {
+  // Specific names first — order matters, first keyword match wins.
+  "leg extension": { primary: "Quads" },
+  "rear delt": { primary: "Shoulders", secondary: ["Back"] },
+  "military": { primary: "Shoulders", secondary: ["Triceps"] },
+  "delt": { primary: "Shoulders" },
+  "pushdown": { primary: "Triceps" },
+  "rope ab": { primary: "Abs" },
+  "adductor": { primary: "Glutes" },
   "bench": { primary: "Chest", secondary: ["Triceps", "Shoulders"] },
   "ohp": { primary: "Shoulders", secondary: ["Triceps"] },
   "overhead": { primary: "Shoulders", secondary: ["Triceps"] },

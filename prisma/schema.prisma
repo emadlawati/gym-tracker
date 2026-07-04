@@ -17,6 +17,7 @@ model User {
   schedule  ScheduledWorkout[]
   profile   UserProfile?
   achievements Achievement[]
+  baselines ExerciseBaseline[]
   createdAt DateTime          @default(now())
 }
 
@@ -148,4 +149,35 @@ model ScheduledWorkout {
   dayOfWeek  Int
   time       String?
   createdAt  DateTime        @default(now())
+}
+
+model ExerciseCategory {
+  id        String            @id @default(cuid())
+  name      String            @unique
+  sortOrder Int               @default(0)
+  exercises CatalogExercise[]
+  createdAt DateTime          @default(now())
+}
+
+model CatalogExercise {
+  id         String           @id @default(cuid())
+  categoryId String
+  category   ExerciseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name       String
+  sortOrder  Int              @default(0)
+  createdAt  DateTime         @default(now())
+}
+
+model ExerciseBaseline {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseName String
+  weight       Float?
+  reps         Int?
+  rpe          Float?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, exerciseName])
 }

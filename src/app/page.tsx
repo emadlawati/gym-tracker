@@ -174,6 +174,16 @@ export default async function DashboardPage() {
       <section>
         <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2.5">Start Workout</h2>
         <div className="grid gap-2">
+          <Link
+            href="/gym-day"
+            className="flex items-center justify-between bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl px-5 py-4 transition-all group active:scale-[0.99] shadow-lg shadow-indigo-600/20"
+          >
+            <div>
+              <h3 className="font-bold text-white">Start Gym Day</h3>
+              <p className="text-xs text-indigo-100/80 mt-0.5">Pick exercises by body part as you go</p>
+            </div>
+            <span className="text-white text-xl group-hover:translate-x-1 transition-transform">→</span>
+          </Link>
           {lastCompletedSession && (
             <Link
               href={`/session/${lastCompletedSession.templateId || templates[0]?.id}`}

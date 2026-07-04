@@ -21,7 +21,25 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const userId = req.cookies.get("gym_user_id")?.value || "user_imad";
-    const { templateId, notes } = await req.json();
+    const { templateId, notes, freestyle } = await req.json();
+
+    // Freestyle "Gym Day" session: no template, exercises are added on the fly.
+    // Idempotent — resume the in-progress Gym Day if one exists rather than
+    // spawning duplicates (guards against Strict Mode double-mounts / revisits).
+    if (freestyle) {
+      const existing = await prisma.workoutSession.findFirst({
+        where: { userId, templateName: "Gym Day", completed: false },
+        orderBy: { date: "desc" },
+        include: { exerciseSets: { orderBy: [{ exerciseName: "asc" }, { setNumber: "asc" }] } },
+      });
+      if (existing) return NextResponse.json(existing);
+
+      const session = await prisma.workoutSession.create({
+        data: { userId, templateName: "Gym Day", notes: notes || null },
+        include: { exerciseSets: true },
+      });
+      return NextResponse.json(session);
+    }
 
     if (!templateId) {
       return NextResponse.json({ error: "templateId is required" }, { status: 400 });
