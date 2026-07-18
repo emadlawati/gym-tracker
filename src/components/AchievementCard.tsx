@@ -42,7 +42,7 @@ export default function AchievementCard(props: Props) {
   return (
     <div
       className={`bg-zinc-900 border rounded-xl p-4 transition-all ${
-        unlocked ? tierBg[tier] : "border-zinc-800 opacity-80"
+        unlocked ? tierBg[tier] : "border-zinc-800"
       }`}
     >
       <div className="flex items-start gap-3">
@@ -70,7 +70,7 @@ export default function AchievementCard(props: Props) {
             <div className="mt-2 space-y-1">
               <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-zinc-600 to-zinc-400 rounded-full transition-all"
+                  className="h-full bg-volt/60 rounded-full transition-all"
                   style={{ width: `${pct}%` }}
                 />
               </div>

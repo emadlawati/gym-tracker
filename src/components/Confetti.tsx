@@ -22,8 +22,9 @@ export default function Confetti({ show, achievements }: Props) {
 
   useEffect(() => {
     if (!show) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const colors = ["#818cf8", "#f472b6", "#34d399", "#fbbf24", "#f87171", "#38bdf8"];
+    const colors = ["#a3e635", "#bef264", "#34d399", "#fbbf24", "#f472b6", "#38bdf8"];
     const p: Particle[] = Array.from({ length: 60 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,

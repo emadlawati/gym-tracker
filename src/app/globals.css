@@ -1,13 +1,42 @@
 @import "tailwindcss";
 
+@theme {
+  --color-volt: #a3e635;
+  --color-volt-bright: #bef264;
+  --color-volt-ink: #1a2e05;
+}
+
 :root {
   --bg: #09090b;
   --fg: #fafafa;
+  --chart-grid: #27272a;
+  --chart-text: #71717a;
+  color-scheme: dark;
 }
 
+/* Light mode: remap the whole palette through v4 color vars.
+   Every zinc utility (bg, border, text, opacities, hovers) flips at once. */
 .light {
-  --bg: #fafafa;
+  --bg: #f4f4f5;
   --fg: #09090b;
+  --color-zinc-950: #f4f4f5;
+  --color-zinc-900: #ffffff;
+  --color-zinc-800: #e4e4e7;
+  --color-zinc-700: #d4d4d8;
+  --color-zinc-600: #a1a1aa;
+  --color-zinc-500: #71717a;
+  --color-zinc-400: #52525b;
+  --color-zinc-300: #3f3f46;
+  --color-zinc-200: #27272a;
+  --color-zinc-100: #18181b;
+  --color-zinc-50: #09090b;
+  --color-white: #09090b;
+  --color-volt: #65a30d;
+  --color-volt-bright: #4d7c0f;
+  --color-volt-ink: #1a2e05;
+  --chart-grid: #e4e4e7;
+  --chart-text: #71717a;
+  color-scheme: light;
 }
 
 body {
@@ -20,55 +49,30 @@ body {
   touch-action: manipulation;
 }
 
-.light .bg-zinc-950 { background: #fafafa; }
-.light .bg-zinc-900 { background: #f4f4f5; }
-.light .bg-zinc-800 { background: #e4e4e7; }
-.light .bg-zinc-700 { background: #d4d4d8; }
-.light .bg-zinc-800\/60 { background: rgba(228, 228, 231, 0.6); }
-.light .bg-zinc-800\/80 { background: rgba(228, 228, 231, 0.8); }
-.light .bg-zinc-950\/50 { background: rgba(250, 250, 250, 0.5); }
-.light .bg-zinc-900\/95 { background: rgba(244, 244, 245, 0.95); }
-
-.light .text-white { color: #09090b; }
-.light .text-zinc-100 { color: #18181b; }
-.light .text-zinc-300 { color: #3f3f46; }
-.light .text-zinc-400 { color: #52525b; }
-.light .text-zinc-500 { color: #71717a; }
-.light .text-zinc-600 { color: #a1a1aa; }
-.light .text-indigo-400 { color: #4f46e5; }
-.light .text-emerald-400 { color: #059669; }
-.light .text-amber-400 { color: #d97706; }
-.light .text-indigo-400\/60 { color: rgba(79, 70, 229, 0.6); }
-.light .text-indigo-400\/70 { color: rgba(79, 70, 229, 0.7); }
-
-.light .border-zinc-800 { border-color: #d4d4d8; }
-.light .border-zinc-700 { border-color: #a1a1aa; }
-.light .border-zinc-700\/40 { border-color: rgba(161, 161, 170, 0.4); }
-.light .border-zinc-700\/50 { border-color: rgba(161, 161, 170, 0.5); }
-.light .border-zinc-800\/80 { border-color: rgba(212, 212, 216, 0.8); }
-.light .border-zinc-800\/60 { border-color: rgba(212, 212, 216, 0.6); }
-
-.light .from-zinc-950 { --tw-gradient-from: #fafafa; }
-.light .to-zinc-950 { --tw-gradient-to: #fafafa; }
-
-.light input, .light select { 
-  color: #09090b;
-  background: #f4f4f5;
-}
-.light input::placeholder, .light select::placeholder { color: #a1a1aa; }
-
-button, a, input, select {
+button, a, input, select, textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
-  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 html * {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Visible, consistent keyboard focus */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px dashed var(--color-volt);
+  outline-offset: 2px;
+}
+
+/* iOS Safari zooms on focus below 16px — keep form text at 16px on phones */
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 @media (max-width: 380px) {
@@ -79,7 +83,7 @@ html * {
   html { font-size: 15px; }
 }
 
-::selection { background: rgba(99, 102, 241, 0.3); }
+::selection { background: color-mix(in oklab, var(--color-volt) 35%, transparent); }
 
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
@@ -87,7 +91,12 @@ input[type="number"]::-webkit-outer-spin-button {
   margin: 0;
 }
 
-input[type="number"] { -moz-appearance: textfield; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+/* Floating tool buttons sit above the bottom nav + safe area */
+.fab-bottom {
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
 
 @keyframes fall {
   0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
@@ -99,5 +108,32 @@ input[type="number"] { -moz-appearance: textfield; }
   100% { transform: translate(-50%, 0); opacity: 1; }
 }
 
+@keyframes sheetUp {
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.96); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 .animate-fall { animation: fall linear forwards; }
-.animate-slideUp { animation: slideUp 0.5s ease-out forwards; }
+.animate-slideUp { animation: slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.animate-sheetUp { animation: sheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.animate-fadeIn { animation: fadeIn 0.2s ease-out forwards; }
+.animate-popIn { animation: popIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

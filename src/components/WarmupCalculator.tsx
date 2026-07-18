@@ -21,7 +21,7 @@ export default function WarmupCalculator({ previousWeight }: Props) {
     <div className="mt-1">
       <button
         onClick={() => setOpen(!open)}
-        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+        className="text-xs text-volt hover:text-volt-bright transition-colors"
       >
         {open ? "Hide" : "Show"} warm-up sets
       </button>

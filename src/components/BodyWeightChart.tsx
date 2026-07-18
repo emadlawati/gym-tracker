@@ -27,12 +27,12 @@ export default function BodyWeightChart({ data }: Props) {
   return (
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-        <XAxis dataKey="date" stroke="#666" fontSize={10} />
-        <YAxis stroke="#666" fontSize={10} domain={[minW, maxW]} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+        <XAxis dataKey="date" stroke="var(--chart-text)" fontSize={10} tickLine={false} />
+        <YAxis stroke="var(--chart-text)" fontSize={10} domain={[minW, maxW]} tickLine={false} axisLine={false} width={36} />
         <Tooltip
-          contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }}
-          labelStyle={{ color: "#ccc" }}
+          contentStyle={{ backgroundColor: "var(--bg)", border: "1px solid var(--chart-grid)", borderRadius: 8, fontSize: 12 }}
+          labelStyle={{ color: "var(--fg)" }}
         />
         <Line
           type="monotone"

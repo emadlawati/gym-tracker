@@ -51,14 +51,14 @@ export default function ProgressChart({ history }: Props) {
         <h3 className="text-sm font-semibold text-white mb-4">Estimated 1RM Over Time</h3>
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-            <XAxis dataKey="date" stroke="#666" fontSize={11} />
-            <YAxis stroke="#666" fontSize={11} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+            <XAxis dataKey="date" stroke="var(--chart-text)" fontSize={11} tickLine={false} />
+            <YAxis stroke="var(--chart-text)" fontSize={11} tickLine={false} axisLine={false} width={36} />
             <Tooltip
-              contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }}
-              labelStyle={{ color: "#ccc" }}
+              contentStyle={{ backgroundColor: "var(--bg)", border: "1px solid var(--chart-grid)", borderRadius: 8, fontSize: 12 }}
+              labelStyle={{ color: "var(--fg)" }}
             />
-            <Line type="monotone" dataKey="e1rm" stroke="#818cf8" strokeWidth={2} dot={{ fill: "#818cf8", r: 4 }} name="e1RM (kg)" />
+            <Line type="monotone" dataKey="e1rm" stroke="#a3e635" strokeWidth={2} dot={{ fill: "#a3e635", r: 4 }} name="e1RM (kg)" />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -67,12 +67,12 @@ export default function ProgressChart({ history }: Props) {
         <h3 className="text-sm font-semibold text-white mb-4">Top Set Weight</h3>
         <ResponsiveContainer width="100%" height={250}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-            <XAxis dataKey="date" stroke="#666" fontSize={11} />
-            <YAxis stroke="#666" fontSize={11} domain={["auto", "auto"]} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+            <XAxis dataKey="date" stroke="var(--chart-text)" fontSize={11} tickLine={false} />
+            <YAxis stroke="var(--chart-text)" fontSize={11} domain={["auto", "auto"]} tickLine={false} axisLine={false} width={36} />
             <Tooltip
-              contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: 8 }}
-              labelStyle={{ color: "#ccc" }}
+              contentStyle={{ backgroundColor: "var(--bg)", border: "1px solid var(--chart-grid)", borderRadius: 8, fontSize: 12 }}
+              labelStyle={{ color: "var(--fg)" }}
             />
             <Line type="monotone" dataKey="weight" stroke="#34d399" strokeWidth={2} dot={{ fill: "#34d399", r: 4 }} name="Weight (kg)" />
           </LineChart>

@@ -44,7 +44,7 @@ export default function UserSwitcher() {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white bg-zinc-800 hover:bg-zinc-700 px-2.5 py-1.5 rounded-full transition-colors"
       >
-        <span className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+        <span className="w-5 h-5 rounded-full bg-volt flex items-center justify-center text-[10px] font-bold text-volt-ink shrink-0">
           {currentUser?.name?.[0] || "?"}
         </span>
         <span className="max-w-[100px] truncate">{currentUser?.title || currentUser?.name || "Select"}</span>
@@ -60,10 +60,10 @@ export default function UserSwitcher() {
                 key={u.id}
                 onClick={() => switchUser(u.id)}
                 className={`w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-700 transition-colors flex items-center gap-2 ${
-                  u.id === currentId ? "text-indigo-400" : "text-zinc-300"
+                  u.id === currentId ? "text-volt" : "text-zinc-300"
                 }`}
               >
-                <span className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                <span className="w-6 h-6 rounded-full bg-volt flex items-center justify-center text-[10px] font-bold text-volt-ink shrink-0">
                   {u.name[0]}
                 </span>
                 {u.title || u.name}

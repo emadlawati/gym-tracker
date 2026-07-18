@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import AchievementCard from "@/components/AchievementCard";
 
 interface Achievement {
@@ -28,10 +29,11 @@ const categoryLabels: Record<string, string> = {
   hidden: "Hidden",
 };
 
-export default function AchievementsPage() {
+function AchievementsContent() {
+  const searchParams = useSearchParams();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>("all");
+  const [filter, setFilter] = useState<string>(searchParams.get("filter") || "all");
 
   useEffect(() => {
     fetch("/api/achievements")
@@ -54,13 +56,13 @@ export default function AchievementsPage() {
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setFilter("all")}
-          className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${filter === "all" ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
+          className={`px-3 py-1.5 text-xs rounded-full font-medium transition-colors ${filter === "all" ? "bg-volt text-volt-ink" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
         >
           All ({achievements.length})
         </button>
         <button
           onClick={() => setFilter("unlocked")}
-          className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${filter === "unlocked" ? "bg-amber-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
+          className={`px-3 py-1.5 text-xs rounded-full font-medium transition-colors ${filter === "unlocked" ? "bg-amber-400 text-zinc-950" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
         >
           Unlocked ({unlocked.length})
         </button>
@@ -68,7 +70,7 @@ export default function AchievementsPage() {
           <button
             key={cat}
             onClick={() => setFilter(cat)}
-            className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${filter === cat ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
+            className={`px-3 py-1.5 text-xs rounded-full font-medium transition-colors ${filter === cat ? "bg-volt text-volt-ink" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}
           >
             {categoryLabels[cat] || cat}
           </button>
@@ -77,11 +79,11 @@ export default function AchievementsPage() {
 
       {!loading && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex items-center justify-between">
-          <span className="text-sm text-white font-medium">{unlocked.length}/{achievements.length} unlocked</span>
+          <span className="text-sm text-white font-medium tabular-nums">{unlocked.length}/{achievements.length} unlocked</span>
           <div className="h-1.5 flex-1 mx-3 bg-zinc-800 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-indigo-600 to-amber-500 rounded-full transition-all" style={{ width: `${achievements.length > 0 ? (unlocked.length / achievements.length) * 100 : 0}%` }} />
+            <div className="h-full bg-gradient-to-r from-volt to-amber-400 rounded-full transition-all" style={{ width: `${achievements.length > 0 ? (unlocked.length / achievements.length) * 100 : 0}%` }} />
           </div>
-          <span className="text-xs text-zinc-500">{achievements.length > 0 ? Math.round((unlocked.length / achievements.length) * 100) : 0}%</span>
+          <span className="text-xs text-zinc-500 tabular-nums">{achievements.length > 0 ? Math.round((unlocked.length / achievements.length) * 100) : 0}%</span>
         </div>
       )}
 
@@ -98,12 +100,29 @@ export default function AchievementsPage() {
             return <AchievementCard key={key} {...rest} />;
           })}
           {filtered.length === 0 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
+            <div className="col-span-2 bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
               <p className="text-zinc-500 text-sm">No achievements in this category yet.</p>
             </div>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+export default function AchievementsPage() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-6 pt-4 animate-pulse">
+        <div className="h-8 bg-zinc-800 rounded w-40" />
+        <div className="grid grid-cols-2 gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 h-28" />
+          ))}
+        </div>
+      </div>
+    }>
+      <AchievementsContent />
+    </Suspense>
   );
 }

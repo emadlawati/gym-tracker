@@ -1,34 +1,47 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+
+const presets = [30, 60, 90, 120, 180];
 
 export default function RestTimer() {
   const [duration, setDuration] = useState(90);
   const [remaining, setRemaining] = useState(0);
   const [running, setRunning] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!running || remaining <= 0) return;
-    const t = setInterval(() => {
+    if (!running) return;
+    intervalRef.current = setInterval(() => {
       setRemaining((prev) => {
         if (prev <= 1) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
           setRunning(false);
+          setFinished(true);
+          if (navigator.vibrate) navigator.vibrate([100, 60, 100, 60, 200]);
+          setTimeout(() => setFinished(false), 5000);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(t);
-  }, [running, remaining]);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [running]);
 
-  const start = useCallback(() => {
-    setRemaining(duration || 90);
+  const start = (secs: number) => {
+    setDuration(secs);
+    setRemaining(secs);
     setRunning(true);
-  }, [duration]);
+    setFinished(false);
+    setOpen(false);
+  };
 
   const stop = () => {
     setRunning(false);
     setRemaining(0);
+    setFinished(false);
   };
 
   const minutes = Math.floor(remaining / 60);
@@ -38,63 +51,60 @@ export default function RestTimer() {
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percent / 100) * circumference;
 
-  const getColor = () => {
-    if (percent >= 90) return "#f87171";
-    if (percent >= 50) return "#fbbf24";
-    return "#34d399";
-  };
-
-  const presets = [30, 60, 90, 120, 180];
+  const active = running || finished;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      {!running && remaining === 0 ? (
-        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-4 shadow-2xl space-y-3">
-          <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Rest Timer</p>
-          <div className="flex gap-1">
+    <div className="fixed right-4 z-50 fab-bottom">
+      {active ? (
+        <button
+          onClick={stop}
+          aria-label={finished ? "Rest complete — dismiss" : "Stop rest timer"}
+          className={`relative rounded-full w-16 h-16 shadow-2xl flex items-center justify-center transition-all ${
+            finished ? "bg-volt text-volt-ink animate-popIn" : "bg-zinc-900 border border-volt/40 text-white"
+          }`}
+        >
+          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r={radius} fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="4" />
+            <circle
+              cx="32" cy="32" r={radius} fill="none"
+              stroke={finished ? "#1a2e05" : "#a3e635"}
+              strokeWidth="4" strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={finished ? 0 : offset}
+              className="transition-all duration-1000 ease-linear"
+            />
+          </svg>
+          <span className="relative z-10 text-xs font-mono font-bold tabular-nums">
+            {finished ? "GO" : `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`}
+          </span>
+        </button>
+      ) : open ? (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-2xl space-y-3 w-48 animate-popIn">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Rest Timer</p>
+            <button onClick={() => setOpen(false)} aria-label="Close rest timer" className="text-zinc-500 hover:text-white text-sm px-1">✕</button>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
             {presets.map((p) => (
               <button
                 key={p}
-                onClick={() => setDuration(p)}
-                className={`px-2 py-1 text-xs rounded font-medium ${
-                  duration === p
-                    ? "bg-indigo-600 text-white"
-                    : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-                }`}
+                onClick={() => start(p)}
+                className="py-2.5 text-xs font-semibold rounded-lg bg-zinc-800 text-zinc-300 hover:bg-volt hover:text-volt-ink transition-colors tabular-nums"
               >
                 {p}s
               </button>
             ))}
           </div>
-          <button
-            onClick={start}
-            className="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-500 transition-colors"
-          >
-            Start {duration}s
-          </button>
         </div>
       ) : (
-        <button onClick={stop} className="relative bg-indigo-600 text-white rounded-full w-16 h-16 shadow-2xl hover:bg-indigo-500 transition-colors flex items-center justify-center">
-          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 64 64">
-            <circle cx="32" cy="32" r={radius} fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="4" />
-            <circle
-              cx="32"
-              cy="32"
-              r={radius}
-              fill="none"
-              stroke={running ? getColor() : "#34d399"}
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={running ? offset : 0}
-              className="transition-all duration-1000"
-            />
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Open rest timer"
+          className="w-11 h-11 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-volt hover:border-volt/40 shadow-xl flex items-center justify-center transition-colors"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="w-5 h-5" aria-hidden="true">
+            <path d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z" />
           </svg>
-          <div className="relative z-10 text-center">
-            <div className="text-xs font-mono font-bold tabular-nums">
-              {remaining > 0 ? `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}` : "GO!"}
-            </div>
-          </div>
         </button>
       )}
     </div>

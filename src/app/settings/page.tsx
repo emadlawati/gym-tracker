@@ -43,7 +43,7 @@ export default function SettingsPage() {
             {user.title && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-zinc-400">Title</span>
-                <span className="text-sm text-indigo-400 font-medium">{user.title}</span>
+                <span className="text-sm text-volt font-medium">{user.title}</span>
               </div>
             )}
           </div>
@@ -53,15 +53,15 @@ export default function SettingsPage() {
       <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
         <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Quick Links</h2>
         <div className="space-y-1">
-          <Link href="/records" className="flex items-center justify-between py-2.5 text-sm text-white hover:text-indigo-400 transition-colors">
+          <Link href="/records" className="flex items-center justify-between py-2.5 text-sm text-white hover:text-volt transition-colors">
             <span>Personal Records</span>
             <span className="text-zinc-600">→</span>
           </Link>
-          <Link href="/weight" className="flex items-center justify-between py-2.5 text-sm text-white hover:text-indigo-400 transition-colors border-t border-zinc-800">
+          <Link href="/weight" className="flex items-center justify-between py-2.5 text-sm text-white hover:text-volt transition-colors border-t border-zinc-800">
             <span>Body Weight</span>
             <span className="text-zinc-600">→</span>
           </Link>
-          <Link href="/measurements" className="flex items-center justify-between py-2.5 text-sm text-white hover:text-indigo-400 transition-colors border-t border-zinc-800">
+          <Link href="/measurements" className="flex items-center justify-between py-2.5 text-sm text-white hover:text-volt transition-colors border-t border-zinc-800">
             <span>Body Measurements</span>
             <span className="text-zinc-600">→</span>
           </Link>

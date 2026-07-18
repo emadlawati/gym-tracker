@@ -47,7 +47,7 @@ export default async function ProgressPage({ params }: { params: Promise<{ exerc
   return (
     <div className="space-y-6 pt-4">
       <div>
-        <Link href="/" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">← Home</Link>
+        <Link href="/" className="text-xs text-volt hover:text-volt-bright transition-colors">← Home</Link>
         <h1 className="text-xl font-bold text-white mt-1">{exerciseName}</h1>
         <p className="text-xs text-zinc-500 mt-0.5">{sessionsCount} sessions · {totalSets} logged sets</p>
       </div>
@@ -60,21 +60,21 @@ export default async function ProgressPage({ params }: { params: Promise<{ exerc
         <>
           {lastSet && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 grid grid-cols-3 gap-3">
-              <div><p className="text-xs text-zinc-500">Last Weight</p><p className="text-lg font-bold text-white">{lastSet.weight}kg</p></div>
-              <div><p className="text-xs text-zinc-500">Last Reps</p><p className="text-lg font-bold text-white">{lastSet.reps}</p></div>
-              <div><p className="text-xs text-zinc-500">Last RPE</p><p className="text-lg font-bold text-white">{lastSet.rpe ?? "—"}</p></div>
+              <div><p className="text-xs text-zinc-500">Last Weight</p><p className="text-lg font-bold text-white tabular-nums">{lastSet.weight}kg</p></div>
+              <div><p className="text-xs text-zinc-500">Last Reps</p><p className="text-lg font-bold text-white tabular-nums">{lastSet.reps}</p></div>
+              <div><p className="text-xs text-zinc-500">Last RPE</p><p className="text-lg font-bold text-white tabular-nums">{lastSet.rpe ?? "—"}</p></div>
             </div>
           )}
 
           {bestE1RM > 0 && bwEntry && (
-            <div className="bg-zinc-900 border border-indigo-500/20 rounded-xl p-4">
+            <div className="bg-zinc-900 border border-volt/20 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Best e1RM</p>
-                  <p className="text-lg font-bold text-white">{Math.round(bestE1RM)}kg</p>
+                  <p className="text-lg font-bold text-white tabular-nums">{Math.round(bestE1RM)}kg</p>
                   {bwEntry && <p className="text-[10px] text-zinc-500">{bestRatio}% bodyweight</p>}
                 </div>
-                <Link href="/achievements?filter=strength" className="text-xs text-indigo-400 hover:text-indigo-300">View milestones →</Link>
+                <Link href="/achievements?filter=strength" className="text-xs text-volt hover:text-volt-bright">View milestones →</Link>
               </div>
             </div>
           )}
@@ -92,7 +92,7 @@ export default async function ProgressPage({ params }: { params: Promise<{ exerc
                   </div>
                   <div className="flex flex-wrap gap-x-4 gap-y-1">
                     {h.sets.map((s) => (
-                      <span key={s.setNumber} className="text-xs text-zinc-400">#{s.setNumber}: {s.weight}kg × {s.reps}{s.rpe ? ` @ ${s.rpe}` : ""}</span>
+                      <span key={s.setNumber} className="text-xs text-zinc-400 tabular-nums">#{s.setNumber}: {s.weight}kg × {s.reps}{s.rpe ? ` @ ${s.rpe}` : ""}</span>
                     ))}
                   </div>
                 </div>
@@ -106,7 +106,7 @@ export default async function ProgressPage({ params }: { params: Promise<{ exerc
         <h3 className="text-sm font-semibold text-white mb-2">Other Exercises</h3>
         <div className="flex flex-wrap gap-1.5">
           {allExercises.filter((e) => e.exerciseName !== exerciseName).map((e) => (
-            <Link key={e.exerciseName} href={`/progress/${encodeURIComponent(e.exerciseName)}`} className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 hover:border-indigo-500/50 rounded-lg text-xs text-zinc-400 hover:text-white transition-colors">
+            <Link key={e.exerciseName} href={`/progress/${encodeURIComponent(e.exerciseName)}`} className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 hover:border-volt/50 rounded-lg text-xs text-zinc-400 hover:text-white transition-colors">
               {e.exerciseName}
             </Link>
           ))}

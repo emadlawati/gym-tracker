@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getUserId } from "@/lib/cookies";
-import HistoryList from "@/components/HistoryList";
 import HistoryFilter from "@/components/HistoryFilter";
 
 export default async function HistoryPage() {
@@ -25,7 +24,7 @@ export default async function HistoryPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">History</h1>
         {sessions.length > 0 && (
-          <a href="/api/export?format=csv" download className="text-xs text-indigo-400 hover:text-indigo-300 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg transition-colors">
+          <a href="/api/export?format=csv" download className="text-xs text-volt hover:text-volt-bright px-3 py-1.5 bg-zinc-900 border border-zinc-800 hover:border-volt/40 rounded-lg transition-colors">
             Export CSV
           </a>
         )}
@@ -37,7 +36,7 @@ export default async function HistoryPage() {
             <h2 className="text-base font-semibold text-white">No sessions yet</h2>
             <p className="text-sm text-zinc-500 mt-1">Completed workouts will show up here.</p>
           </div>
-          <Link href="/" className="inline-block px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-500 active:bg-indigo-400 transition-all active:scale-[0.98]">Start a workout</Link>
+          <Link href="/" className="inline-block px-5 py-2.5 bg-volt text-volt-ink rounded-xl text-sm font-bold hover:bg-volt-bright transition-all active:scale-[0.98]">Start a workout</Link>
         </div>
       ) : (
         <HistoryFilter sessions={sessions} templateNames={templateNames} />

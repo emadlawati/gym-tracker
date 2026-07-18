@@ -40,9 +40,9 @@ export default function HistoryList({ sessions }: Props) {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-white">{s.templateName || s.template?.name || "Workout"}</span>
                     {s.completed ? (
-                      <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-1.5 py-0.5 rounded font-medium">Done</span>
+                      <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-semibold">Done</span>
                     ) : (
-                      <span className="text-[10px] bg-amber-900/50 text-amber-400 px-1.5 py-0.5 rounded font-medium">In Progress</span>
+                      <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded font-semibold">In Progress</span>
                     )}
                   </div>
                   <p className="text-xs text-zinc-500 mt-0.5 truncate">

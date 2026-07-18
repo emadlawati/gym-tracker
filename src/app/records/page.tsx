@@ -45,20 +45,20 @@ export default async function RecordsPage() {
             <h2 className="text-base font-semibold text-white">No records yet</h2>
             <p className="text-sm text-zinc-500 mt-1">Complete a workout to build your PR wall.</p>
           </div>
-          <Link href="/" className="inline-block px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-500 active:bg-indigo-400 transition-all active:scale-[0.98]">Start a workout</Link>
+          <Link href="/" className="inline-block px-5 py-2.5 bg-volt text-volt-ink rounded-xl text-sm font-bold hover:bg-volt-bright transition-all active:scale-[0.98]">Start a workout</Link>
         </div>
       ) : (
         <div className="space-y-2">
           {records.map((r) => (
-            <Link key={r.exerciseName} href={`/progress/${encodeURIComponent(r.exerciseName)}`} className="block bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl p-4 transition-colors">
+            <Link key={r.exerciseName} href={`/progress/${encodeURIComponent(r.exerciseName)}`} className="block bg-zinc-900 border border-zinc-800 hover:border-volt/40 rounded-xl p-4 transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-white">{r.exerciseName}</h3>
                 <span className="text-[10px] text-zinc-500">{formatDate(r.bestSetDate)}</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <div className="text-center"><p className="text-lg font-bold text-indigo-400">{r.bestE1RM}kg</p><p className="text-[10px] text-zinc-500">e1RM</p></div>
-                <div className="text-center"><p className="text-lg font-bold text-white">{r.bestWeight}kg x {r.bestReps}</p><p className="text-[10px] text-zinc-500">Best Set</p></div>
-                <div className="text-center"><p className="text-lg font-bold text-emerald-400">{r.bestVolume.toLocaleString()}</p><p className="text-[10px] text-zinc-500">Best Volume</p></div>
+                <div className="text-center"><p className="text-lg font-bold text-volt tabular-nums">{r.bestE1RM}kg</p><p className="text-[10px] text-zinc-500">e1RM</p></div>
+                <div className="text-center"><p className="text-lg font-bold text-white tabular-nums">{r.bestWeight}kg x {r.bestReps}</p><p className="text-[10px] text-zinc-500">Best Set</p></div>
+                <div className="text-center"><p className="text-lg font-bold text-emerald-400 tabular-nums">{r.bestVolume.toLocaleString()}</p><p className="text-[10px] text-zinc-500">Best Volume</p></div>
               </div>
             </Link>
           ))}

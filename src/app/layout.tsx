@@ -20,12 +20,10 @@ const geistMono = Geist_Mono({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#09090b" },
-    { media: "(prefers-color-scheme: light)", color: "#09090b" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f4f5" },
   ],
 };
 
@@ -58,12 +56,18 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      data-scroll-behavior="smooth"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              try {
+                if (/(?:^|; )theme=light/.test(document.cookie)) {
+                  document.documentElement.classList.add("light");
+                }
+              } catch (e) {}
               if ("serviceWorker" in navigator) {
                 window.addEventListener("load", () => {
                   navigator.serviceWorker.register("/sw.js").catch(() => {});
@@ -75,7 +79,7 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100 overscroll-none">
         <div className="max-w-lg mx-auto w-full px-4 pt-3 pb-1 flex items-center justify-between">
-          <span className="text-[10px] text-zinc-600 dark:text-zinc-600 text-zinc-400 dark:text-zinc-500 truncate">
+          <span className="text-[10px] text-zinc-500 truncate">
             {user ? `${user.name} — ${user.title}` : ""}
           </span>
           <div className="flex items-center gap-2">

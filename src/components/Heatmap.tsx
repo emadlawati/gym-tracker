@@ -7,83 +7,75 @@ interface Props {
   months?: number;
 }
 
+const LEVEL_CLASSES = [
+  "bg-zinc-800/60",
+  "bg-volt/20",
+  "bg-volt/40",
+  "bg-volt/60",
+  "bg-volt",
+];
+
 export default function Heatmap({ sessions, months = 4 }: Props) {
-  const cells = useMemo(() => {
+  const weeks = useMemo(() => {
     const end = new Date();
-    const start = new Date();
+    end.setHours(0, 0, 0, 0);
+    const start = new Date(end);
     start.setMonth(start.getMonth() - months);
+    // Align to Monday
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
 
     const volumeMap = new Map<string, number>();
     for (const s of sessions) {
       const key = new Date(s.date).toDateString();
       volumeMap.set(key, (volumeMap.get(key) || 0) + s.volume);
     }
+    const maxVolume = Math.max(1, ...volumeMap.values());
 
-    const maxVolume = Math.max(1, ...Array.from(volumeMap.values()));
+    const result: ({ date: Date; volume: number; level: number } | null)[][] = [];
+    let week: ({ date: Date; volume: number; level: number } | null)[] = [];
+    const cur = new Date(start);
 
-    const rows: { date: Date; volume: number; level: number }[][] = [];
-    const current = new Date(start);
-
-    while (current <= end) {
-      const dayOfWeek = current.getDay();
-      if (dayOfWeek === 0 && rows.length > 0) {
-        // new week
+    while (cur <= end || week.length % 7 !== 0) {
+      if (cur <= end) {
+        const vol = volumeMap.get(cur.toDateString()) || 0;
+        week.push({ date: new Date(cur), volume: vol, level: vol === 0 ? 0 : Math.ceil((vol / maxVolume) * 4) });
+      } else {
+        week.push(null); // pad final week
       }
-      const weekIdx = Math.floor(
-        (current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24) / 7
-      );
-      if (!rows[weekIdx]) rows[weekIdx] = [];
-      const key = current.toDateString();
-      const vol = volumeMap.get(key) || 0;
-      rows[weekIdx].push({
-        date: new Date(current),
-        volume: vol,
-        level: vol === 0 ? 0 : Math.ceil((vol / maxVolume) * 4),
-      });
-      current.setDate(current.getDate() + 1);
+      if (week.length === 7) {
+        result.push(week);
+        week = [];
+      }
+      cur.setDate(cur.getDate() + 1);
     }
-
-    return rows.filter((r) => r && r.length > 0);
+    return result;
   }, [sessions, months]);
 
-  const dayLabels = ["", "Mon", "", "Wed", "", "Fri", ""];
-
-  const getColor = (level: number) => {
-    switch (level) {
-      case 0: return "bg-zinc-800/50";
-      case 1: return "bg-indigo-900/60";
-      case 2: return "bg-indigo-700/70";
-      case 3: return "bg-indigo-500/80";
-      case 4: return "bg-indigo-400";
-      default: return "bg-zinc-800/50";
-    }
-  };
+  const dayLabels = ["Mon", "", "Wed", "", "Fri", "", ""];
 
   return (
     <div className="overflow-x-auto -mx-1 pb-1">
-      <div className="flex gap-1 min-w-fit justify-center">
-        <div className="flex flex-col gap-1 mr-1">
+      <div className="flex gap-[3px] min-w-fit justify-center">
+        <div className="flex flex-col gap-[3px] mr-1">
           {dayLabels.map((label, i) => (
-            <div key={i} className="w-5 h-3 flex items-center">
-              <span className="text-[8px] text-zinc-600">{label}</span>
+            <div key={i} className="w-6 h-3 flex items-center">
+              <span className="text-[8px] text-zinc-600 leading-none">{label}</span>
             </div>
           ))}
         </div>
-        {cells.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-1">
-            {Array.from({ length: 7 }, (_, di) => {
-              const cell = week.find((c) => c.date.getDay() === (di + 1) % 7 || (di === 6 ? 0 : di + 1));
-              if (!cell) {
-                return <div key={di} className="w-3 h-3 rounded-sm bg-transparent" />;
-              }
-              return (
+        {weeks.map((week, wi) => (
+          <div key={wi} className="flex flex-col gap-[3px]">
+            {week.map((cell, di) =>
+              cell ? (
                 <div
                   key={di}
-                  className={`w-3 h-3 rounded-sm ${getColor(cell.level)}`}
-                  title={`${cell.date.toDateString()}: ${cell.volume.toLocaleString()}kg`}
+                  className={`w-3 h-3 rounded-[3px] ${LEVEL_CLASSES[cell.level]}`}
+                  title={`${cell.date.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}: ${cell.volume.toLocaleString()}kg`}
                 />
-              );
-            })}
+              ) : (
+                <div key={di} className="w-3 h-3" />
+              )
+            )}
           </div>
         ))}
       </div>

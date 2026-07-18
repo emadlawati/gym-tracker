@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { estimate1RM } from "@/lib/utils";
 
 export async function GET(
   req: NextRequest,

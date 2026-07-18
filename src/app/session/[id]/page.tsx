@@ -73,6 +73,30 @@ export default function SessionPage() {
   const [collapsedExercises, setCollapsedExercises] = useState<Set<string>>(new Set());
   const [completing, setCompleting] = useState(false);
 
+  // Auto-collapse an exercise only when it transitions into "all sets done" —
+  // manual re-expands survive, and already-complete exercises start collapsed.
+  // Render-phase "adjust state when props change" pattern (no effect needed).
+  const [prevComplete, setPrevComplete] = useState<Map<string, boolean> | null>(null);
+  if (session) {
+    const next = new Map<string, boolean>();
+    for (const ex of session.template.exercises) {
+      const sets = session.exerciseSets.filter((s) => s.exerciseName === ex.exerciseName);
+      next.set(ex.exerciseName, sets.length > 0 && sets.every((s) => s.completed));
+    }
+    const prev = prevComplete;
+    const firstRun = prev === null;
+    const toCollapse: string[] = [];
+    for (const [name, complete] of next) {
+      if (complete && (firstRun || prev.get(name) === false)) toCollapse.push(name);
+    }
+    const newToCollapse = toCollapse.filter((n) => !collapsedExercises.has(n));
+    const mapChanged = firstRun || [...next].some(([k, v]) => prev.get(k) !== v);
+    if (mapChanged) setPrevComplete(next);
+    if (newToCollapse.length > 0) {
+      setCollapsedExercises((prevSet) => new Set([...prevSet, ...newToCollapse]));
+    }
+  }
+
   useEffect(() => {
     if (session && !session.completed) {
       const handleBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); };
@@ -279,7 +303,7 @@ export default function SessionPage() {
           </p>
           <div className="flex flex-col gap-2">
             <button onClick={handleResumeSession}
-              className="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-500 transition-all active:scale-[0.98]">
+              className="w-full py-3 bg-volt text-volt-ink rounded-xl text-sm font-bold hover:bg-volt-bright transition-all active:scale-[0.98]">
               Resume Session
             </button>
             <button onClick={handleDiscardAndStartFresh}
@@ -311,7 +335,7 @@ export default function SessionPage() {
     return (
       <div className="flex flex-col items-center justify-center pt-20 space-y-4">
         <p className="text-zinc-500">{error || "Session not found"}</p>
-        <button onClick={() => router.push("/")} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold">Go Home</button>
+        <button onClick={() => router.push("/")} className="px-5 py-2.5 bg-volt text-volt-ink rounded-xl text-sm font-bold hover:bg-volt-bright">Go Home</button>
       </div>
     );
   }
@@ -322,7 +346,7 @@ export default function SessionPage() {
   const allSetsCompleted = completedSets === totalSets;
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-5 pb-8">
       <Confetti show={showConfetti} achievements={xpGain?.newAchievements} />
 
       {saveError && (
@@ -336,7 +360,7 @@ export default function SessionPage() {
           <h1 className="text-xl font-bold text-white">{session.template?.name || "Workout"}</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
             {exercises.length} exercises · {totalSets} sets
-            {elapsed > 0 && <span className="ml-3 text-indigo-400 font-mono tabular-nums">{formatDuration(elapsed)}</span>}
+            {elapsed > 0 && <span className="ml-3 text-volt font-mono tabular-nums">{formatDuration(elapsed)}</span>}
           </p>
         </div>
         <button onClick={() => router.push(`/history/${session.id}`)} className="text-xs text-zinc-500 hover:text-zinc-300">Detail</button>
@@ -346,8 +370,8 @@ export default function SessionPage() {
 
       {xpGain && (
         <div className="space-y-3">
-          <div className="bg-zinc-900 border border-indigo-500/50 rounded-xl p-4 text-center animate-pulse">
-            <p className="text-2xl font-bold text-indigo-400">+{xpGain.xp} XP!</p>
+          <div className="bg-zinc-900 border border-volt/50 rounded-xl p-4 text-center animate-popIn">
+            <p className="text-2xl font-bold text-volt">+{xpGain.xp} XP</p>
             <p className="text-xs text-zinc-400 mt-1">{xpGain.levelName} · Lv. {xpGain.level}</p>
           </div>
 
@@ -389,21 +413,24 @@ export default function SessionPage() {
         const exerciseComplete = completedCount === exerciseSets.length;
 
         return (
-          <section key={exercise.id} className="space-y-3">
+          <section key={exercise.id} className={`bg-zinc-900 border rounded-xl p-4 space-y-3 transition-colors ${
+            exerciseComplete ? "border-emerald-500/25" : "border-zinc-800"
+          }`}>
             <button
               onClick={() => {
                 const n = new Set(collapsedExercises);
                 if (isExerciseCollapsed) n.delete(exercise.exerciseName); else n.add(exercise.exerciseName);
                 setCollapsedExercises(n);
               }}
-              className="flex items-baseline gap-2 flex-wrap w-full text-left"
+              aria-expanded={!isExerciseCollapsed}
+              className="flex items-center gap-2 w-full text-left"
             >
-              <span className={`text-[10px] transition-transform ${isExerciseCollapsed ? "" : "rotate-90"}`}>▸</span>
+              <span className={`text-[10px] text-zinc-500 transition-transform ${isExerciseCollapsed ? "" : "rotate-90"}`}>▸</span>
               <h2 className="text-base font-semibold text-white">{exercise.exerciseName}</h2>
-              <span className="text-xs text-zinc-600">{completedCount}/{exerciseSets.length}</span>
-              {exerciseComplete && <span className="text-[10px] text-emerald-500">Done</span>}
+              <span className="text-xs text-zinc-600 tabular-nums">{completedCount}/{exerciseSets.length}</span>
+              {exerciseComplete && <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-semibold">Done</span>}
               {volumePR && (
-                <span className="text-[10px] bg-amber-900/50 text-amber-400 px-1.5 py-0.5 rounded font-bold">PR!</span>
+                <span className="text-[10px] bg-amber-400/15 text-amber-400 px-1.5 py-0.5 rounded font-bold">PR</span>
               )}
             </button>
 
@@ -425,22 +452,22 @@ export default function SessionPage() {
                   <span className={`text-[10px] transition-transform ${isCollapsed ? "" : "rotate-90"}`}>▸</span>
                   Last: {new Date(prev.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                   {!isCollapsed && (
-                    <span className="ml-1 text-zinc-600">
+                    <span className="ml-1 text-zinc-600 tabular-nums">
                       {prev.sets.map((ps) => `${ps.weight}×${ps.reps}`).join(" · ")}
                     </span>
                   )}
                 </button>
                 {isCollapsed && (
-                  <div className="mt-1.5 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 space-y-1">
+                  <div className="mt-1.5 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 space-y-1">
                     {prev.sets.map((ps) => (
                       <div key={ps.setNumber} className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-500">Set {ps.setNumber}: {ps.weight}kg × {ps.reps}{ps.rpe ? ` @RPE ${ps.rpe}` : ""}</span>
+                        <span className="text-zinc-500 tabular-nums">Set {ps.setNumber}: {ps.weight}kg × {ps.reps}{ps.rpe ? ` @RPE ${ps.rpe}` : ""}</span>
                         <button
                           onClick={() => {
                             const es = exerciseSets.find((e) => e.setNumber === ps.setNumber);
                             if (es) copyPreviousToSet(es.id, ps);
                           }}
-                          className="text-[10px] text-indigo-400 hover:text-indigo-300 px-2 py-0.5 rounded bg-zinc-800"
+                          className="text-[10px] text-volt hover:text-volt-bright px-2 py-0.5 rounded bg-zinc-800"
                         >
                           Use
                         </button>
@@ -469,14 +496,14 @@ export default function SessionPage() {
                       previousBestReps={prevBest.bestReps || undefined}
                     />
                     {!es.completed && exerciseSets.length > 1 && (
-                      <button onClick={() => handleDeleteSet(es.id)}
-                        className="absolute -top-1 -right-1 w-5 h-5 bg-zinc-700 hover:bg-red-600 text-zinc-400 hover:text-white rounded-full text-[10px] opacity-0 group-hover/set:opacity-100 transition-all flex items-center justify-center">✕</button>
+                      <button onClick={() => handleDeleteSet(es.id)} aria-label="Delete set"
+                        className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-zinc-700 hover:bg-red-600 text-zinc-300 hover:text-white rounded-full text-[10px] opacity-60 group-hover/set:opacity-100 transition-all flex items-center justify-center">✕</button>
                     )}
                   </div>
                 );
               })}
               <button onClick={() => handleAddSet(exercise.exerciseName)}
-                className="w-full py-2 text-xs text-zinc-500 hover:text-indigo-400 border border-dashed border-zinc-800 hover:border-indigo-500/40 rounded-lg transition-colors">
+                className="w-full py-2 text-xs text-zinc-500 hover:text-volt border border-dashed border-zinc-800 hover:border-volt/40 rounded-lg transition-colors">
                 + Add Set
               </button>
             </div>}
@@ -495,7 +522,7 @@ export default function SessionPage() {
             onChange={(e) => setSessionNotes(e.target.value)}
             placeholder="How was the session? Any notes..."
             rows={3}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 resize-none mb-3"
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-volt resize-none mb-3"
           />
         )}
       </div>

@@ -21,7 +21,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
     return (
       <div className="pt-20 text-center">
         <p className="text-zinc-500">Session not found</p>
-        <Link href="/history" className="text-indigo-400 text-sm mt-2 inline-block">Back to history</Link>
+        <Link href="/history" className="text-volt text-sm mt-2 inline-block">Back to history</Link>
       </div>
     );
   }
@@ -37,7 +37,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-6 pt-4">
       <div>
-        <Link href="/history" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">← History</Link>
+        <Link href="/history" className="text-xs text-volt hover:text-volt-bright transition-colors">← History</Link>
         <h1 className="text-xl font-bold text-white mt-1">{session.templateName || session.template?.name || "Workout"}</h1>
         <div className="flex items-center gap-3">
           <p className="text-sm text-zinc-500 mt-0.5">
@@ -48,7 +48,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
           <a
             href={`/api/share/${session.id}`}
             target="_blank"
-            className="text-[10px] text-indigo-400 hover:text-indigo-300 px-2 py-1 bg-indigo-600/10 rounded-lg"
+            className="text-[10px] text-volt hover:text-volt-bright px-2 py-1 bg-volt/10 rounded-lg"
           >
             Share
           </a>
@@ -67,7 +67,7 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
           <section key={exerciseName} className="space-y-2">
             <div className="flex items-baseline gap-3">
               <h2 className="text-base font-semibold text-white">{exerciseName}</h2>
-              {topSet.e1rm > 0 && <span className="text-xs text-zinc-500">Top e1RM: {topSet.e1rm}kg</span>}
+              {topSet.e1rm > 0 && <span className="text-xs text-zinc-500 tabular-nums">Top e1RM: {topSet.e1rm}kg</span>}
             </div>
             <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
               <table className="w-full text-sm">
@@ -83,16 +83,16 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
                 <tbody>
                   {sets.map((s) => (
                     <tr key={s.id} className="border-b border-zinc-800/50 last:border-0">
-                      <td className="py-2.5 px-4 text-zinc-400">{s.setNumber}</td>
-                      <td className="py-2.5 px-4 text-right font-medium text-white">{s.weight}kg</td>
-                      <td className="py-2.5 px-4 text-right text-zinc-300">{s.reps}</td>
-                      <td className="py-2.5 px-4 text-right text-zinc-400">{s.rpe ?? "—"}</td>
-                      <td className="py-2.5 px-4 text-right text-zinc-500">{s.weight * s.reps}</td>
+                      <td className="py-2.5 px-4 text-zinc-400 tabular-nums">{s.setNumber}</td>
+                      <td className="py-2.5 px-4 text-right font-medium text-white tabular-nums">{s.weight}kg</td>
+                      <td className="py-2.5 px-4 text-right text-zinc-300 tabular-nums">{s.reps}</td>
+                      <td className="py-2.5 px-4 text-right text-zinc-400 tabular-nums">{s.rpe ?? "—"}</td>
+                      <td className="py-2.5 px-4 text-right text-zinc-500 tabular-nums">{s.weight * s.reps}</td>
                     </tr>
                   ))}
                   <tr className="bg-zinc-800/30">
                     <td className="py-2 px-4 text-xs text-zinc-500 font-medium" colSpan={4}>Exercise volume</td>
-                    <td className="py-2 px-4 text-right text-sm font-semibold text-indigo-400">{exerciseVolume}kg</td>
+                    <td className="py-2 px-4 text-right text-sm font-semibold text-volt tabular-nums">{exerciseVolume}kg</td>
                   </tr>
                 </tbody>
               </table>
@@ -106,11 +106,11 @@ export default async function SessionDetailPage({ params }: { params: Promise<{ 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <p className="text-xs text-zinc-500">Total Volume</p>
-            <p className="text-lg font-bold text-white">{totalVolume}kg</p>
+            <p className="text-lg font-bold text-white tabular-nums">{totalVolume}kg</p>
           </div>
           <div>
             <p className="text-xs text-zinc-500">Total Sets</p>
-            <p className="text-lg font-bold text-white">{session.exerciseSets.filter((s) => s.completed).length}</p>
+            <p className="text-lg font-bold text-white tabular-nums">{session.exerciseSets.filter((s) => s.completed).length}</p>
           </div>
         </div>
       </div>

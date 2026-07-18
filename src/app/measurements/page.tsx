@@ -56,12 +56,12 @@ export default function MeasurementsPage() {
                 value={form[f.key] || ""}
                 onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
                 placeholder="—"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white tabular-nums focus:outline-none focus:border-volt"
               />
             </div>
           ))}
         </div>
-        <button onClick={handleAdd} className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-500 active:scale-[0.98] transition-all">Log</button>
+        <button onClick={handleAdd} className="w-full py-2.5 bg-volt text-volt-ink rounded-xl text-sm font-bold hover:bg-volt-bright active:scale-[0.98] transition-all">Log</button>
       </div>
 
       {loading ? (

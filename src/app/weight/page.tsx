@@ -10,10 +10,15 @@ interface WeightEntry {
   date: string;
 }
 
+function localISODate() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+}
+
 export default function WeightPage() {
   const [entries, setEntries] = useState<WeightEntry[]>([]);
   const [weight, setWeight] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(localISODate);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,13 +70,13 @@ export default function WeightPage() {
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
             placeholder="Weight (kg)"
-            className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500"
+            className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2.5 text-white tabular-nums focus:outline-none focus:border-volt"
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           />
           <button
             onClick={handleAdd}
             disabled={!weight || parseFloat(weight) <= 0}
-            className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-500 disabled:opacity-40 transition-colors"
+            className="px-5 py-2.5 bg-volt text-volt-ink rounded-lg text-sm font-bold hover:bg-volt-bright disabled:opacity-40 transition-colors"
           >
             Log
           </button>
@@ -80,13 +85,13 @@ export default function WeightPage() {
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-volt"
         />
 
         {latest && (
           <div className="text-center py-2">
             <span className="text-xs text-zinc-500">Latest: </span>
-            <span className="text-lg font-bold text-white">{latest.weight}kg</span>
+            <span className="text-lg font-bold text-white tabular-nums">{latest.weight}kg</span>
             <span className="text-xs text-zinc-500 ml-2">{formatDate(latest.date)}</span>
           </div>
         )}
@@ -115,7 +120,7 @@ export default function WeightPage() {
               className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3"
             >
               <div>
-                <span className="text-sm font-medium text-white">{e.weight}kg</span>
+                <span className="text-sm font-medium text-white tabular-nums">{e.weight}kg</span>
                 <span className="text-xs text-zinc-500 ml-2">{formatDate(e.date)}</span>
               </div>
               <button

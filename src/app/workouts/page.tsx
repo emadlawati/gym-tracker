@@ -164,7 +164,7 @@ export default function WorkoutsPage() {
         {!showForm && (
           <button
             onClick={startNew}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-500 transition-colors"
+            className="px-4 py-2 bg-volt text-volt-ink rounded-lg text-sm font-bold hover:bg-volt-bright transition-colors"
           >
             + New
           </button>
@@ -197,10 +197,10 @@ export default function WorkoutsPage() {
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-white">{t.name}</h3>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <button
                       onClick={() => startEdit(t)}
-                      className="text-xs text-indigo-400 hover:text-indigo-300"
+                      className="text-xs text-volt hover:text-volt-bright"
                     >
                       Edit
                     </button>
@@ -215,10 +215,10 @@ export default function WorkoutsPage() {
                 <div className="space-y-1">
                   {t.exercises.map((ex, i) => (
                     <div key={i} className="flex items-center text-sm">
-                      <span className="text-zinc-500 w-6 text-xs">{i + 1}.</span>
+                      <span className="text-zinc-500 w-6 text-xs tabular-nums">{i + 1}.</span>
                       <span className="text-zinc-300 flex-1">{ex.exerciseName}</span>
                       {((ex as Exercise).defaultWeight || (ex as Exercise).defaultReps) && (
-                        <span className="text-zinc-600 text-[10px] mr-2">
+                        <span className="text-zinc-600 text-[10px] mr-2 tabular-nums">
                           {(ex as Exercise).defaultWeight ? `${(ex as Exercise).defaultWeight}kg` : ""}
                           {(ex as Exercise).defaultWeight && (ex as Exercise).defaultReps ? " × " : ""}
                           {(ex as Exercise).defaultReps ? `${(ex as Exercise).defaultReps}` : ""}
@@ -246,7 +246,7 @@ export default function WorkoutsPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Workout A"
-              className="w-full mt-1.5 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full mt-1.5 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-volt"
             />
           </div>
 
@@ -257,7 +257,7 @@ export default function WorkoutsPage() {
               </label>
               <button
                 onClick={addExercise}
-                className="text-xs text-indigo-400 hover:text-indigo-300"
+                className="text-xs text-volt hover:text-volt-bright"
               >
                 + Add
               </button>
@@ -270,9 +270,9 @@ export default function WorkoutsPage() {
                 >
                   <div className="relative flex items-start gap-2">
                     <div className="flex flex-col gap-0.5 pt-1.5">
-                      <button type="button" onClick={() => moveExercise(idx, "up")} disabled={idx === 0}
+                      <button type="button" onClick={() => moveExercise(idx, "up")} disabled={idx === 0} aria-label="Move up"
                         className="text-[10px] text-zinc-500 hover:text-white disabled:opacity-20 transition-colors leading-none">▲</button>
-                      <button type="button" onClick={() => moveExercise(idx, "down")} disabled={idx === exercises.length - 1}
+                      <button type="button" onClick={() => moveExercise(idx, "down")} disabled={idx === exercises.length - 1} aria-label="Move down"
                         className="text-[10px] text-zinc-500 hover:text-white disabled:opacity-20 transition-colors leading-none">▼</button>
                     </div>
                     <input
@@ -291,7 +291,7 @@ export default function WorkoutsPage() {
                       }}
                       onBlur={() => setTimeout(() => setActiveDropdown(null), 200)}
                       placeholder="Exercise name (e.g. Bench Press)"
-                      className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                      className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-volt"
                     />
                     {activeDropdown === idx && suggestions.length > 0 && (
                       <div className="absolute top-full left-0 right-10 mt-1 z-20 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden">
@@ -316,6 +316,7 @@ export default function WorkoutsPage() {
                     )}
                     <button
                       onClick={() => removeExercise(idx)}
+                      aria-label="Remove exercise"
                       className="text-red-400 text-xs px-2 py-2 hover:text-red-300"
                     >
                       ✕
@@ -334,7 +335,7 @@ export default function WorkoutsPage() {
                           n[idx] = { ...n[idx], sets: parseInt(e.target.value) || 3 };
                           setExercises(n);
                         }}
-                        className="w-16 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white text-center focus:outline-none focus:border-indigo-500"
+                        className="w-16 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white text-center tabular-nums focus:outline-none focus:border-volt"
                       />
                     </div>
                     <input
@@ -346,7 +347,7 @@ export default function WorkoutsPage() {
                         setExercises(n);
                       }}
                       placeholder="Notes (optional)"
-                      className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500 placeholder:text-zinc-600"
+                      className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-volt placeholder:text-zinc-600"
                     />
                   </div>
                   <input
@@ -358,7 +359,7 @@ export default function WorkoutsPage() {
                       setExercises(n);
                     }}
                     placeholder="Settings (e.g. seat pos 5, medium grip)"
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder:text-zinc-600"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-volt placeholder:text-zinc-600"
                   />
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-zinc-600 shrink-0">Defaults</span>
@@ -373,7 +374,7 @@ export default function WorkoutsPage() {
                           setExercises(n);
                         }}
                         placeholder="—"
-                        className="w-16 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-indigo-500"
+                        className="w-16 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center tabular-nums focus:outline-none focus:border-volt"
                       />
                     </div>
                     <div className="flex items-center gap-1">
@@ -387,7 +388,7 @@ export default function WorkoutsPage() {
                           setExercises(n);
                         }}
                         placeholder="—"
-                        className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center focus:outline-none focus:border-indigo-500"
+                        className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1.5 text-xs text-white text-center tabular-nums focus:outline-none focus:border-volt"
                       />
                     </div>
                     <div className="flex items-center gap-1">
@@ -399,7 +400,7 @@ export default function WorkoutsPage() {
                           n[idx] = { ...n[idx], defaultRpe: e.target.value ? parseFloat(e.target.value) : undefined };
                           setExercises(n);
                         }}
-                        className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-1 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                        className="w-14 bg-zinc-900 border border-zinc-700 rounded-lg px-1 py-1.5 text-xs text-white focus:outline-none focus:border-volt"
                       >
                         <option value="">—</option>
                         {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((v) => (<option key={v} value={v}>{v}</option>))}
@@ -415,7 +416,7 @@ export default function WorkoutsPage() {
             <button
               onClick={handleSave}
               disabled={!name.trim() || exercises.length === 0 || exercises.some((e) => !e.exerciseName.trim())}
-              className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 py-2.5 bg-volt text-volt-ink rounded-lg text-sm font-bold hover:bg-volt-bright disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {editing ? "Update Workout" : "Create Workout"}
             </button>

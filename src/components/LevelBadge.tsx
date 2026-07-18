@@ -24,7 +24,7 @@ export default function LevelBadge({ totalXP, level, currentLevelXP, nextLevelXP
         </div>
         <div className="text-right">
           <p className="text-[10px] text-zinc-500 uppercase tracking-wider">XP</p>
-          <p className="text-lg font-bold text-indigo-400">{totalXP.toLocaleString()}</p>
+          <p className="text-lg font-bold text-volt tabular-nums">{totalXP.toLocaleString()}</p>
         </div>
       </div>
 
@@ -35,7 +35,7 @@ export default function LevelBadge({ totalXP, level, currentLevelXP, nextLevelXP
         </div>
         <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-700"
+            className="h-full bg-gradient-to-r from-volt to-volt-bright rounded-full transition-all duration-700"
             style={{ width: `${progress}%` }}
           />
         </div>
